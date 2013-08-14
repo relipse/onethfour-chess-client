@@ -12,8 +12,9 @@ class Client : public QObject
     enum ByteType{Latin1, Utf8};
     explicit Client(QObject *parent = 0, ByteType byteType = Latin1);
     void connect(const QHostAddress& host, int port);
-    void send(char *buffer);
-    public slots:
+    void send(const char *buffer);
+    void send(const QString &sbuffer);
+public slots:
     //when the client gets connected to the server
     virtual void on_connected();
 

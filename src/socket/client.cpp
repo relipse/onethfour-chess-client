@@ -6,9 +6,9 @@ Client::Client(QObject *parent, ByteType byteType)
     : QObject(parent), m_byteType(byteType)
 {
     socket = new QTcpSocket(this);
-    connect(socket, SIGNAL(connected()), this, SLOT(on_connected()));
-    connect(socket, SIGNAL(readyRead()), this, SLOT(on_readyread()));
-    connect(socket, SIGNAL(disconnected()), this, SLOT(on_disconnected()));
+     QObject::connect(socket, SIGNAL(connected()), this, SLOT(on_connected()));
+     QObject::connect(socket, SIGNAL(readyRead()), this, SLOT(on_readyread()));
+    QObject::connect(socket, SIGNAL(disconnected()), this, SLOT(on_disconnected()));
 }
 
 void Client::on_connected()
@@ -40,7 +40,17 @@ void Client::on_receiveText(const QString &data)
     //do something
 }
 
-void Client::send(char* buffer){
+void Client::send(const QString& sbuffer)
+{
+    if (m_byteType == Latin1){
+        socket->write(sbuffer.toLatin1());
+    }else if (m_byteType == Utf8){
+        socket->write(sbuffer.toUtf8());
+    }
+    socket->flush();
+}
+
+void Client::send(const char* buffer){
     socket->write(buffer);
     socket->flush();
 }

@@ -6,7 +6,6 @@ class ChessClient : public Client
 {
     Q_OBJECT
 public:
-    enum ByteType{Latin1, Utf8};
     explicit ChessClient(QObject *parent = 0, ByteType byteType = Latin1);
 
     public slots:

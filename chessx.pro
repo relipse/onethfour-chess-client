@@ -36,7 +36,9 @@ FORMS += \
     src/gui/engineoptiondialog.ui \
     src/gui/tagdetailwidget.ui \
     src/gui/renametagdialog.ui \
-    src/gui/openingtreewidget.ui
+    src/gui/openingtreewidget.ui \
+    src/gui/frmclientconsole.ui \
+    src/gui/dlgconnecttochessserver.ui
 
 HEADERS += src/database/board.h \
 	src/database/move.h \
@@ -148,7 +150,9 @@ HEADERS += src/database/board.h \
     src/socket/client.h \
     src/socket/iccclient.h \
     src/socket/chessclient.h \
-    src/icc/icc.h
+    src/icc/icc.h \
+    src/gui/frmclientconsole.h \
+    src/gui/dlgconnecttochessserver.h
 
 SOURCES += src/database/board.cpp \
 	src/database/common.cpp \
@@ -245,7 +249,10 @@ SOURCES += src/database/board.cpp \
     src/database/ecoinfo.cpp \
     src/socket/client.cpp \
     src/socket/iccclient.cpp \
-    src/socket/chessclient.cpp
+    src/socket/chessclient.cpp \
+    src/gui/frmclientconsole.cpp \
+    src/icc/icc.cpp \
+    src/gui/dlgconnecttochessserver.cpp
 
 TEMPLATE = app
 INCLUDEPATH += src/database

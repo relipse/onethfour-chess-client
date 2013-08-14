@@ -1,4 +1,5 @@
 #include "iccclient.h"
+#include "chessclient.h"
 
 using namespace ICC;
 
@@ -11,11 +12,11 @@ IccClient::IccClient(QObject *parent, const QString& username, const QString& pa
 void IccClient::on_connected()
 {
     //send level2settings
-    send(QString(tr("level2settings=")+m_level2settings+tr("\n")).toLatin1());
+    send(tr("level2settings=")+m_level2settings+tr("\n"));
     if (!m_username.isEmpty()){
-        send(QString(m_username + "\n").toLatin1());
+        send(QString(m_username + "\n"));
         if (!m_password.isEmpty()){
-            send(QString(m_password + "\n").toLatin1());
+            send(QString(m_password + "\n"));
         }
     }else{
         //no username provided, what now?
@@ -30,6 +31,8 @@ void IccClient::on_disconnected()
 #include <QRegExp>
 void IccClient::on_receiveText(const QString &data)
 {
+    emit onData(data);
+
     QString _Y(ICC::DGSPLIT);
 
     //parse incoming text
@@ -37,16 +40,20 @@ void IccClient::on_receiveText(const QString &data)
     int pos = 0;    // where we are in the string
     int count = 0;  // how many Eric and Eirik's we've counted
     while (pos >= 0) {
-        pos = rx.indexIn(str, pos);
+        pos = rx.indexIn(data, pos);
         if (pos >= 0) {
             parseDatagram(rx.cap(1).toInt(), rx.cap(0));
             emit onDatagram(rx.cap(1).toInt(), rx.cap(0));
             ++pos;      // move along in str
-            ++count;    // count our Eric or Eirik
+            ++count;
         }
     }
 
+
+
 }
+
+#include <QDebug>
 
 //Parse known datagrams
 //todo: we can modify this depending on level2settings since level2settings tells us what
@@ -64,7 +71,9 @@ void IccClient::parseDatagram(int dg, const QString &unparsedDg)
     if (dg == DG_WHO_AM_I){
         emit onLoggedIn(unparsedDg);
     }else if (dg == DG_PERSONAL_TELL){
-        emit onTell("","");
+        QString fromHandle;
+        QString telltext = unparsedDg;
+        emit onTell(fromHandle,telltext);
     }else if (dg == DG_LOGIN_FAILED){
         emit onLoginFailed();
     }else{
@@ -74,5 +83,15 @@ void IccClient::parseDatagram(int dg, const QString &unparsedDg)
     }
     //if execution goes here, that means it successfully parsed and emitted the proper signal
     emit onParseSuccessDatagram(dg, unparsedDg);
+}
+
+void IccClient::SetUsername(const QString &username)
+{
+    m_username = username;
+}
+
+void IccClient::SetPassword(const QString &password)
+{
+    m_password = password;
 }
 
