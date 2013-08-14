@@ -1516,6 +1516,10 @@ void MainWindow::slotConnectToChessServer()
         MessageDialog::information(tr("There was a problem with the selected server"));
         return;
     }
+    //set username and password
+    m_chessClient->SetUsername(dlgConnect->ui->cmbHandle->currentText());
+    m_chessClient->SetPassword(dlgConnect->ui->edtPassword->text());
+
     m_chessClient->connect(QHostAddress(rx.cap(2)), rx.cap(3).toInt());
     m_consoleWidget->AddLine(tr("Connecting to ") + unparsedServer + tr("..."));
 }
