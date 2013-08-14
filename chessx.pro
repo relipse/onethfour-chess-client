@@ -144,7 +144,11 @@ HEADERS += src/database/board.h \
     src/gui/openingtreewidget.h \
     src/gui/ecolistwidget.h \
     src/database/ecoinfo.h \
-    src/gui/TextBrowserEx.h
+    src/gui/TextBrowserEx.h \
+    src/socket/client.h \
+    src/socket/iccclient.h \
+    src/socket/chessclient.h \
+    src/icc/icc.h
 
 SOURCES += src/database/board.cpp \
 	src/database/common.cpp \
@@ -238,7 +242,10 @@ SOURCES += src/database/board.cpp \
     src/gui/renametagdialog.cpp \
     src/gui/openingtreewidget.cpp \
     src/gui/ecolistwidget.cpp \
-    src/database/ecoinfo.cpp
+    src/database/ecoinfo.cpp \
+    src/socket/client.cpp \
+    src/socket/iccclient.cpp \
+    src/socket/chessclient.cpp
 
 TEMPLATE = app
 INCLUDEPATH += src/database
