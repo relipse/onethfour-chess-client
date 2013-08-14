@@ -45,6 +45,9 @@
 #include "toolmainwindow.h"
 #include "version.h"
 
+#include "dlgconnecttochessserver.h"
+#include "ui_dlgconnecttochessserver.h"
+
 #include <time.h>
 
 #include <QFileDialog>
@@ -61,6 +64,9 @@
 #include <QStatusBar>
 #include <QTimer>
 #include <QToolBar>
+#include <QHostAddress>
+
+
 
 MainWindow::MainWindow() : QMainWindow(),
     m_saveDialog(0),
@@ -73,6 +79,8 @@ MainWindow::MainWindow() : QMainWindow(),
     m_currentTo(InvalidSquare)
 {
 	setObjectName("MainWindow");
+
+
 
     m_autoPlayTimer = new QTimer(this);
     m_autoPlayTimer->setInterval(3000);
@@ -178,6 +186,28 @@ MainWindow::MainWindow() : QMainWindow(),
 	m_menuView->addAction(gameListDock->toggleViewAction());
 	gameListDock->toggleViewAction()->setShortcut(Qt::CTRL + Qt::Key_L);
     connect(m_gameList, SIGNAL(raiseRequest()), gameListDock, SLOT(raise()));
+
+    //Chess server console
+    DockWidgetEx* consoleListDock = new DockWidgetEx(tr("Console"), this);
+    consoleListDock->setObjectName("Console");
+    m_consoleWidget = new FrmClientConsole(this);
+    m_consoleWidget->setMinimumSize(100,100);
+    consoleListDock->setWidget(m_consoleWidget);
+    addDockWidget(Qt::RightDockWidgetArea, consoleListDock);
+    m_menuView->addAction(consoleListDock->toggleViewAction());
+    consoleListDock->toggleViewAction()->setShortcut(Qt::Key_F12);
+    connect(m_consoleWidget->getEditSend(), SIGNAL(returnPressed()), this, SLOT(slotSendToServer()));
+
+
+    m_chessClient = new IccClient(this);
+    connect(m_chessClient, SIGNAL(onData(QString)), this, SLOT(slotReceiveServerRawData(QString)));
+    connect(m_chessClient, SIGNAL(onDatagram(int,QString)), this, SLOT(slotReceiveServerData(int, QString)));
+
+
+    dlgConnect = new DlgConnectToChessServer(this);
+    connect(dlgConnect->ui->btnConnect, SIGNAL(clicked()), this, SLOT(slotConnectToChessServer()));
+
+    dlgConnect->show();
 
     // Player List
     DockWidgetEx* playerListDock = new DockWidgetEx(tr("Players"), this);
@@ -1336,4 +1366,9 @@ void MainWindow::slotVersionFound(int major, int minor, int build)
     {
         statusBar()->showMessage(tr("The current version is newer than the latest stable"));
     }
+}
+
+void MainWindow::on_btnCancel_clicked()
+{
+    close();
 }

@@ -15,10 +15,16 @@
 #include "move.h"
 #include "output.h"
 
+#include "../socket/iccclient.h"
+#include "frmclientconsole.h"
+#include "dlgconnecttochessserver.h"
+
 #include <QtGui>
 #include <QAction>
 #include <QMainWindow>
 #include <QUndoGroup>
+
+
 
 class Analysis;
 class AnalysisWidget;
@@ -308,6 +314,13 @@ public slots:
     /** Pass a tag changing request from rename dialog to database */
     void slotRenameRequest(QString tag, QString newValue, QString oldValue);
 
+
+    /** */
+    void slotReceiveServerData(int dg, const QString& unparsedDg);
+
+    void slotReceiveServerRawData(const QString& unparsedData);
+
+    void slotConnectToChessServer();
 protected slots:
     /** Receiver for a failed loading of a database */
     void loadError(QUrl url);
@@ -340,6 +353,7 @@ protected slots:
     /** Make a screenshot and save it to file */
     void slotScreenShot();
 
+    void slotSendToServer();
 protected:
     void copyGame(int target, int index);
     Database* getDatabaseByPath(QString path);
@@ -382,6 +396,8 @@ private slots:
     void slotDatabaseModified();
     void slotHttpDone(QNetworkReply *reply);
     void slotVersionFound(int major, int minor, int build);
+
+    void on_btnCancel_clicked();
 
 private:
 	/** Create single menu action. */
@@ -437,7 +453,8 @@ private:
     ToolMainWindow* m_gameWindow;
     QToolBar* m_gameToolBar;
     QTabWidget* m_tabWidget;
-    QList<BoardView*> m_boardViews;
+    QList<BoardView*> m_boardViews; 
+    FrmClientConsole* m_consoleWidget;
 	/* Status */
 	QLabel* m_statusFilter;
     QLabel* m_gameTitle;
@@ -473,6 +490,8 @@ private:
     QAction* m_autoAnalysis;
     QUndoGroup m_undoGroup;
     QNetworkAccessManager* m_manager;
+    IccClient* m_chessClient;
+    DlgConnectToChessServer* dlgConnect;
 };
 
 

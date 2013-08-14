@@ -36,6 +36,9 @@
 #include "tableview.h"
 #include "version.h"
 
+#include "dlgconnecttochessserver.h"
+#include "ui_dlgconnecttochessserver.h"
+
 #include <time.h>
 
 #include <QtGui>
@@ -46,7 +49,7 @@
 #include <QPixmap>
 #include <QProgressBar>
 #include <QStatusBar>
-
+#include <QHostAddress>
 
 void MainWindow::slotFileNew()
 {
@@ -1488,6 +1491,35 @@ void MainWindow::slotRenameRequest(QString tag, QString newValue, QString oldVal
     }
 }
 
+void MainWindow::slotReceiveServerData(int dg, const QString &unparsedDg)
+{
+    QString sdg(ICC::DatagramToString(dg));
+    m_consoleWidget->AddLine(sdg + unparsedDg);
+
+}
+
+void MainWindow::slotReceiveServerRawData(const QString &unparsedData)
+{
+    m_consoleWidget->AddLine(unparsedData, "gray");
+}
+
+
+
+void MainWindow::slotConnectToChessServer()
+{
+    dlgConnect->close();
+    m_consoleWidget->show();
+    //parse combo box (is there a better way to do this?)
+    QString unparsedServer = dlgConnect->ui->cmbChessServer->currentText();
+    QRegExp rx("(\\w.*?) -> (\\w.*?\\w)\\s*?:\\s*?(\\d+)");
+    if (!rx.indexIn(unparsedServer)){
+        MessageDialog::information(tr("There was a problem with the selected server"));
+        return;
+    }
+    m_chessClient->connect(QHostAddress(rx.cap(2)), rx.cap(3).toInt());
+    m_consoleWidget->AddLine(tr("Connecting to ") + unparsedServer + tr("..."));
+}
+
 void MainWindow::slotDatabaseDeleteFilter()
 {
 	database()->remove(*databaseInfo()->filter());
@@ -1696,4 +1728,13 @@ void MainWindow::slotScreenShot()
     QString fileName = shotDir + "/shot-" + QDateTime::currentDateTime().toString() + ".png";
 
     pixmap.save(fileName);
+}
+
+void MainWindow::slotSendToServer()
+{
+    if (!m_chessClient || !m_consoleWidget){
+        return;
+    }
+    m_chessClient->send(m_consoleWidget->getEditSend()->text()+"\n");
+    m_consoleWidget->getEditSend()->clear();
 }
