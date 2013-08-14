@@ -31,6 +31,8 @@ namespace InternetChessClub
             return "display master";
         }else if (title == "H"){
             return "helper";
+        }else if (title == "*"){
+            return "administrator";
         }
         return "";
     }
