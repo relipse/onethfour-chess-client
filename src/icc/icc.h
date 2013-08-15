@@ -6,7 +6,7 @@
 // thank you http://www6.chessclub.com/resources/formats/formats.txt
 namespace InternetChessClub
 {
-    const char DGSPLIT = '\031';
+    const char DGSPLIT = ''; //javascript version here: '\031';
     enum Titles{ GM, IM, FM, WGM, WIM, WFM, TD, C, U, ADMIN, DM, H};
 
     const char* GetTitleDescription(const char* title);
