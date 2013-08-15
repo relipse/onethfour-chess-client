@@ -200,13 +200,17 @@ MainWindow::MainWindow() : QMainWindow(),
 
 
     m_chessClient = new IccClient(this);
+
+    connect(m_chessClient, SIGNAL(onError(QString)), this, SLOT(slotChessServerSocketError(QAbstractSocket::SocketError)));
     connect(m_chessClient, SIGNAL(onData(QString)), this, SLOT(slotReceiveServerRawData(QString)));
+    connect(m_chessClient, SIGNAL(onNonDatagram(int,QString)), this, SLOT(slotReceiveServerNonDatagram(int, QString)));
     connect(m_chessClient, SIGNAL(onDatagram(int,QString)), this, SLOT(slotReceiveServerData(int, QString)));
+    connect(m_chessClient, SIGNAL(onTell(QString, QString, int, QString)), this, SLOT(slotOnTell(QString, QString, int, QString)));
 
 
     dlgConnect = new DlgConnectToChessServer(this);
     connect(dlgConnect->ui->btnConnect, SIGNAL(clicked()), this, SLOT(slotConnectToChessServer()));
-
+    connect(dlgConnect->ui->btnCancel, SIGNAL(clicked()), this, SLOT(slotCancelConnect()));
     dlgConnect->show();
 
     // Player List
@@ -1368,7 +1372,3 @@ void MainWindow::slotVersionFound(int major, int minor, int build)
     }
 }
 
-void MainWindow::on_btnCancel_clicked()
-{
-    close();
-}

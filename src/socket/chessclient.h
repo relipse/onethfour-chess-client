@@ -12,6 +12,8 @@ public:
     //when the client gets connected to the server
     virtual void on_connected();
 
+    virtual void on_error(QAbstractSocket::SocketError error);
+
     //when disconnected from server
     virtual void on_disconnected();
 

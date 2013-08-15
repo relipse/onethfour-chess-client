@@ -317,10 +317,15 @@ public slots:
 
     /** */
     void slotReceiveServerData(int dg, const QString& unparsedDg);
+    void slotReceiveServerNonDatagram(const QString& text);
+
+    void slotOnTell(const QString& from,const QString& titles, int type, const QString& text);
 
     void slotReceiveServerRawData(const QString& unparsedData);
 
     void slotConnectToChessServer();
+
+    void slotChessServerSocketError(QAbstractSocket::SocketError error);
 protected slots:
     /** Receiver for a failed loading of a database */
     void loadError(QUrl url);
@@ -354,6 +359,8 @@ protected slots:
     void slotScreenShot();
 
     void slotSendToServer();
+
+    void slotCancelConnect();
 protected:
     void copyGame(int target, int index);
     Database* getDatabaseByPath(QString path);
@@ -396,8 +403,6 @@ private slots:
     void slotDatabaseModified();
     void slotHttpDone(QNetworkReply *reply);
     void slotVersionFound(int major, int minor, int build);
-
-    void on_btnCancel_clicked();
 
 private:
 	/** Create single menu action. */

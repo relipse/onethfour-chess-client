@@ -11,13 +11,14 @@ class Client : public QObject
     public:
     enum ByteType{Latin1, Utf8};
     explicit Client(QObject *parent = 0, ByteType byteType = Latin1);
-    void connect(const QHostAddress& host, int port);
+    void connect(const QString& host, int port);
     void send(const char *buffer);
     void send(const QString &sbuffer);
 public slots:
     //when the client gets connected to the server
     virtual void on_connected();
 
+    virtual void on_error(QAbstractSocket::SocketError error);
     //when disconnected from server
     virtual void on_disconnected();
 

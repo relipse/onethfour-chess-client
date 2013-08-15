@@ -1495,7 +1495,16 @@ void MainWindow::slotReceiveServerData(int dg, const QString &unparsedDg)
 {
     QString sdg(ICC::DatagramToString(dg));
     m_consoleWidget->AddLine(sdg + unparsedDg);
+}
 
+void MainWindow::slotReceiveServerNonDatagram(const QString &text)
+{
+    m_consoleWidget->AddLine(text);
+}
+
+void MainWindow::slotOnTell(const QString &from, const QString &titles, int type, const QString &text)
+{
+    m_consoleWidget->AddLine(from + tr("(%1) tells you: ").arg(titles) + text, "yellow");
 }
 
 void MainWindow::slotReceiveServerRawData(const QString &unparsedData)
@@ -1503,6 +1512,9 @@ void MainWindow::slotReceiveServerRawData(const QString &unparsedData)
     m_consoleWidget->AddLine(unparsedData, "gray");
 }
 
+void MainWindow::slotChessServerSocketError(QAbstractSocket::SocketError error) {
+     m_consoleWidget->AddLine(QString(error), "red");
+}
 
 
 void MainWindow::slotConnectToChessServer()
@@ -1511,16 +1523,20 @@ void MainWindow::slotConnectToChessServer()
     m_consoleWidget->show();
     //parse combo box (is there a better way to do this?)
     QString unparsedServer = dlgConnect->ui->cmbChessServer->currentText();
-    QRegExp rx("(\\w.*?) -> (\\w.*?\\w)\\s*?:\\s*?(\\d+)");
-    if (!rx.indexIn(unparsedServer)){
+    qDebug() << unparsedServer;
+    //QRegExp rx("(\\w.*?) -> (\\w.*?\\w)\\s*?:\\s*?(\\d+)");
+    QRegExp rx("((\\S+):(\\d+))");
+    if (rx.indexIn(unparsedServer) == -1){
         MessageDialog::information(tr("There was a problem with the selected server"));
         return;
     }
+    qDebug() << rx.cap(1) << " " << rx.cap(2) << " " << rx.cap(3);
+
     //set username and password
     m_chessClient->SetUsername(dlgConnect->ui->cmbHandle->currentText());
     m_chessClient->SetPassword(dlgConnect->ui->edtPassword->text());
 
-    m_chessClient->connect(QHostAddress(rx.cap(2)), rx.cap(3).toInt());
+    m_chessClient->connect(rx.cap(2), rx.cap(3).toInt());
     m_consoleWidget->AddLine(tr("Connecting to ") + unparsedServer + tr("..."));
 }
 
@@ -1741,4 +1757,9 @@ void MainWindow::slotSendToServer()
     }
     m_chessClient->send(m_consoleWidget->getEditSend()->text()+"\n");
     m_consoleWidget->getEditSend()->clear();
+}
+
+void MainWindow::slotCancelConnect()
+{
+    dlgConnect->close();
 }

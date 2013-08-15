@@ -11,6 +11,11 @@ void ChessClient::on_connected()
     //do nothing
 }
 
+void ChessClient::on_error(QAbstractSocket::SocketError error)
+{
+    //do nothing
+}
+
 void ChessClient::on_disconnected()
 {
     //do nothing

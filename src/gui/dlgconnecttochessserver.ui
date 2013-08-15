@@ -82,12 +82,12 @@
    </property>
    <item>
     <property name="text">
-     <string>ICC -&gt; chessclub.com:23</string>
+     <string>ICC -&gt; chessclub.com:5070</string>
     </property>
    </item>
    <item>
     <property name="text">
-     <string>ICC -&gt; chessclub.com:5070</string>
+     <string>ICC -&gt; chessclub.com:23</string>
     </property>
    </item>
    <item>
@@ -123,6 +123,13 @@
    </property>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>cmbHandle</tabstop>
+  <tabstop>edtPassword</tabstop>
+  <tabstop>btnConnect</tabstop>
+  <tabstop>btnCancel</tabstop>
+  <tabstop>cmbChessServer</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

@@ -8,10 +8,16 @@ Client::Client(QObject *parent, ByteType byteType)
     socket = new QTcpSocket(this);
      QObject::connect(socket, SIGNAL(connected()), this, SLOT(on_connected()));
      QObject::connect(socket, SIGNAL(readyRead()), this, SLOT(on_readyread()));
-    QObject::connect(socket, SIGNAL(disconnected()), this, SLOT(on_disconnected()));
+     QObject::connect(socket, SIGNAL(error(QAbstractSocket::SocketError)),this, SLOT(on_error(QAbstractSocket::SocketError)));
+     QObject::connect(socket, SIGNAL(disconnected()), this, SLOT(on_disconnected()));
 }
 
 void Client::on_connected()
+{
+    //do nothing
+}
+
+void Client::on_error(QAbstractSocket::SocketError error)
 {
     //do nothing
 }
@@ -55,7 +61,7 @@ void Client::send(const char* buffer){
     socket->flush();
 }
 
-void Client::connect(const QHostAddress& host, int port)
+void Client::connect(const QString &host, int port)
 {
     socket->connectToHost(host, port);
 }
