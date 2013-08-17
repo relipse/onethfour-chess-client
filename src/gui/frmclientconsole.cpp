@@ -15,8 +15,9 @@ FrmClientConsole::~FrmClientConsole()
 
 void FrmClientConsole::AddLine(const QString& line, const QString& color)
 {
+    //we need to strip html and what-not
     QString style = color.isEmpty() ? tr("") : tr(" style=\"color: %1\"").arg(color);
-    ui->txtConsole->append(tr("<div")+style+tr(">") + line + tr("</div>"));
+    ui->txtConsole->append(tr("<pre")+style+tr(">") + line + tr("</pre>"));
 }
 
 QLineEdit *FrmClientConsole::getEditSend() const

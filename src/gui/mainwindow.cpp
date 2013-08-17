@@ -1331,16 +1331,18 @@ void MainWindow::restoreRecentFiles()
 
 void MainWindow::StartCheckUpdate()
 {
-    if (AppSettings->getValue("/General/onlineVersionCheck").toBool())
+    //for the time-being disable automatic update checking
+    //TODO: in the future use github to keep track of the lastest version
+    if (false && AppSettings->getValue("/General/onlineVersionCheck").toBool())
     {
         m_manager = new QNetworkAccessManager(this);
         connect(m_manager, SIGNAL(finished(QNetworkReply*)),
                 SLOT(slotHttpDone(QNetworkReply*)));
         connect(this, SIGNAL(signalVersionFound(int,int,int)),
                 SLOT(slotVersionFound(int,int,int)));
-        QUrl url("/projects/chessx/");
+        QUrl url("/relipse/onethfour-chess-client/");
         url.setScheme("http");
-        url.setHost("sourceforge.net");
+        url.setHost("github.com");
         QNetworkRequest request(url);
         m_manager->get(request);
     }
