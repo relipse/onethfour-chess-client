@@ -1,8 +1,8 @@
 /***************************************************************************
-							 BoardView - view of the current board
-									  -------------------
-	 begin                : Sun 21 Aug 2005
-	 copyright            : (C) 2005-2007 Michal Rudolf <mrudolf@kdewebdev.org>
+                             BoardView - view of the current board
+                                      -------------------
+     begin                : Sun 21 Aug 2005
+     copyright            : (C) 2005-2007 Michal Rudolf <mrudolf@kdewebdev.org>
  ***************************************************************************/
 
 /***************************************************************************
@@ -35,13 +35,13 @@ BoardView::BoardView(QWidget* parent, int flags) : QWidget(parent),
     m_atLineEnd(true),
     m_flags(flags),
     m_coordinates(false), m_dragged(Empty), m_clickUsed(false),m_wheelCurrentDelta(0),
-    m_minDeltaWheel(0),m_moveListCurrent(0),m_showMoveIndicator(true),m_DbIndex(0)
+    m_minDeltaWheel(0),m_moveListCurrent(0),m_showMoveIndicator(true),m_DbIndex(0), m_gameNumber(0)
 {
     QSizePolicy policy(QSizePolicy::Preferred, QSizePolicy::Preferred);
-	policy.setHeightForWidth(true);
-	setSizePolicy(policy);
-	setMouseTracking(true);
-	installEventFilter(this);
+    policy.setHeightForWidth(true);
+    setSizePolicy(policy);
+    setMouseTracking(true);
+    installEventFilter(this);
 }
 
 BoardView::~BoardView()
@@ -49,41 +49,41 @@ BoardView::~BoardView()
 
 bool BoardView::eventFilter(QObject *obj, QEvent *ev)
 {
-	if (ev->type() == QEvent::Leave || ev->type() == QEvent::WindowDeactivate)
+    if (ev->type() == QEvent::Leave || ev->type() == QEvent::WindowDeactivate)
     {
-		removeGuess();
+        removeGuess();
     }
-	return QWidget::eventFilter(obj, ev);
+    return QWidget::eventFilter(obj, ev);
 }
 
 void BoardView::setFlags(int flags)
 {
-	m_flags = flags;
+    m_flags = flags;
 }
 
 void BoardView::setBoard(const Board& value,int from, int to, bool atLineEnd)
 {
     m_clickUsed = true;
-	Board oldboard = m_board;
-	m_board = value;
+    Board oldboard = m_board;
+    m_board = value;
     m_currentFrom = from;
     m_currentTo = to;
     m_atLineEnd = atLineEnd;
-	if (underMouse())
+    if (underMouse())
     {
-		updateGuess(m_hoverSquare);
+        updateGuess(m_hoverSquare);
     }
-	update();
+    update();
 }
 
 Board BoardView::board() const
 {
-	return m_board;
+    return m_board;
 }
 
 const BoardTheme& BoardView::theme() const
 {
-	return m_theme;
+    return m_theme;
 }
 
 void BoardView::showMoveIndicator(bool visible)
@@ -175,7 +175,7 @@ void BoardView::drawPieces(QPaintEvent* event)
     for (Square square = 0; square < 64; square++) {
         QRect rect = squareRect(square);
         if (!event->region().intersects(rect))
-             continue;
+            continue;
         int coord =  m_coordinates ? CoordinateSize : 0;
         int x = isFlipped() ? 7 - square % 8 : square % 8;
         int y = isFlipped() ? square / 8 : 7 - square / 8;
@@ -192,7 +192,7 @@ void BoardView::drawPieces(QPaintEvent* event)
                 pen.setJoinStyle(Qt::MiterJoin);
                 p.setPen(pen);
                 p.drawRect(pos.x() + 1 + m_showFrame, pos.y() + 1 + m_showFrame,
-                        m_theme.size().width() - 2 - m_showFrame, m_theme.size().height() - 2 - m_showFrame);
+                           m_theme.size().width() - 2 - m_showFrame, m_theme.size().height() - 2 - m_showFrame);
             }
         }
 
@@ -203,7 +203,7 @@ void BoardView::drawPieces(QPaintEvent* event)
             pen.setJoinStyle(Qt::MiterJoin);
             p.setPen(pen);
             p.drawRect(pos.x() + 1 + m_showFrame, pos.y() + 1 + m_showFrame,
-                    m_theme.size().width() - 2 - m_showFrame, m_theme.size().height() - 2 - m_showFrame);
+                       m_theme.size().width() - 2 - m_showFrame, m_theme.size().height() - 2 - m_showFrame);
         }
 
         if (m_showFrame)
@@ -227,12 +227,12 @@ void BoardView::paintEvent(QPaintEvent* event)
 
 void BoardView::resizeBoard(QSize sz)
 {
-	// subtract move indicator from width
+    // subtract move indicator from width
     int coord = m_coordinates ? CoordinateSize : 0;
     int xsize = (sz.width()-1 - coord ) / 8;
     int ysize = (sz.height()-1 - coord ) / 8;
     int size = std::min (xsize,ysize);
-	m_theme.setSize(QSize(size, size));
+    m_theme.setSize(QSize(size, size));
 }
 
 void BoardView::resizeEvent(QResizeEvent* e)
@@ -242,36 +242,36 @@ void BoardView::resizeEvent(QResizeEvent* e)
 
 Square BoardView::squareAt(const QPoint& p) const
 {
-	int x = p.x(), y = p.y();
-	int width = m_theme.size().width();
-	int height = m_theme.size().height();
+    int x = p.x(), y = p.y();
+    int width = m_theme.size().width();
+    int height = m_theme.size().height();
     x -= m_coordinates ? CoordinateSize : 0;
-	if (x <= 0 || y <= 0 || x >= width*8 || y >= height*8)
-		return InvalidSquare;
-	x /= width;
-	y /= height;
-	return isFlipped() ? (8 * y + 7 - x) : (8 *(7 - y) + x);
+    if (x <= 0 || y <= 0 || x >= width*8 || y >= height*8)
+        return InvalidSquare;
+    x /= width;
+    y /= height;
+    return isFlipped() ? (8 * y + 7 - x) : (8 *(7 - y) + x);
 }
 
 void BoardView::mousePressEvent(QMouseEvent* event)
 {
-	m_dragStart = event->pos();
+    m_dragStart = event->pos();
 }
 
 bool BoardView::showGuess(Square s)
 {
-	// Don't want to constantly recalculate guess, so remember which square
-	// the mouse is hovering over, and only show new guess when it changes
+    // Don't want to constantly recalculate guess, so remember which square
+    // the mouse is hovering over, and only show new guess when it changes
     if (m_guessMove && s != m_hoverSquare && !(m_flags & SuppressGuessMove))
     {
-		m_hoverSquare = s;
-		removeGuess();
+        m_hoverSquare = s;
+        removeGuess();
         m_moveListCurrent = 0;
         m_moveList.Clear();
 #ifdef USE_ECO_GUESS
-		if (m_board.ecoMove(s, &m_hifrom, &m_hito)) {
-			update(squareRect(m_hifrom));
-			update(squareRect(m_hito));
+        if (m_board.ecoMove(s, &m_hifrom, &m_hito)) {
+            update(squareRect(m_hifrom));
+            update(squareRect(m_hito));
         }
         else
 #endif
@@ -283,18 +283,18 @@ bool BoardView::showGuess(Square s)
                 m_hiTo = sm.to;
                 update(squareRect(m_hiFrom));
                 update(squareRect(m_hiTo));
-			}
-		}
+            }
+        }
         return true;
-	}
+    }
     return false;
 }
 
 void BoardView::updateGuess(Square s)
 {
-	// Invalidate any currently displayed guess to allow new guess to show
-	m_hoverSquare = InvalidSquare;
-	showGuess(s);
+    // Invalidate any currently displayed guess to allow new guess to show
+    m_hoverSquare = InvalidSquare;
+    showGuess(s);
 }
 
 void BoardView::removeGuess()
@@ -304,7 +304,7 @@ void BoardView::removeGuess()
         update(squareRect(m_hiFrom));
         update(squareRect(m_hiTo));
         m_hiFrom = m_hiTo = InvalidSquare;
-	}
+    }
 }
 
 void BoardView::nextGuess(Square s)
@@ -368,8 +368,8 @@ void BoardView::mouseMoveEvent(QMouseEvent *event)
         {
             removeGuess();
         }
-		return;
-	}
+        return;
+    }
 
     if (event->modifiers() & Qt::ShiftModifier)
     {
@@ -378,46 +378,46 @@ void BoardView::mouseMoveEvent(QMouseEvent *event)
 
     if (m_dragged != Empty)
     {
-		QRect old = QRect(m_dragPoint, m_theme.size());
-		m_dragPoint = event->pos() - m_theme.pieceCenter();
-		update(old);
-		update(QRect(m_dragPoint, m_theme.size()));
-		return;
-	}
+        QRect old = QRect(m_dragPoint, m_theme.size());
+        m_dragPoint = event->pos() - m_theme.pieceCenter();
+        update(old);
+        update(QRect(m_dragPoint, m_theme.size()));
+        return;
+    }
 
-	if ((event->pos() - m_dragStart).manhattanLength()
+    if ((event->pos() - m_dragStart).manhattanLength()
             < QApplication::startDragDistance())
     {
         // Click and move - start dragging
-		return;
+        return;
     }
 
-	Square s = squareAt(m_dragStart);
-	if (!canDrag(s))
+    Square s = squareAt(m_dragStart);
+    if (!canDrag(s))
     {
-		return;
+        return;
     }
-	removeGuess();
-	m_dragged = m_board.pieceAt(s);
-	m_dragPoint = event->pos() - m_theme.pieceCenter();
-	m_board.removeFrom(s);
-	update(squareRect(s));
-	update(QRect(m_dragPoint, m_theme.size()));
-	unselectSquare();
+    removeGuess();
+    m_dragged = m_board.pieceAt(s);
+    m_dragPoint = event->pos() - m_theme.pieceCenter();
+    m_board.removeFrom(s);
+    update(squareRect(s));
+    update(QRect(m_dragPoint, m_theme.size()));
+    unselectSquare();
 }
 
 void BoardView::mouseReleaseEvent(QMouseEvent* event)
 {
     setCursor(QCursor(Qt::ArrowCursor));
     int button = event->button() + event->modifiers();
-	Square s = squareAt(event->pos());
-	m_clickUsed = false;
+    Square s = squareAt(event->pos());
+    m_clickUsed = false;
 
     if (!(event->button() & Qt::LeftButton))
     {
         Square from = squareAt(m_dragStart);
         if (s==from) from = InvalidSquare;
-		if (s != InvalidSquare)
+        if (s != InvalidSquare)
         {
             emit clicked(s, button, mapToGlobal(event->pos()), from);
         }
@@ -427,8 +427,8 @@ void BoardView::mouseReleaseEvent(QMouseEvent* event)
             emit invalidMove(from);
         }
         m_dragged = Empty;
-		return;
-	}
+        return;
+    }
     else
     {
         if (event->modifiers() & Qt::ShiftModifier)
@@ -443,12 +443,12 @@ void BoardView::mouseReleaseEvent(QMouseEvent* event)
 
     if (m_dragged != Empty)
     {
-		Square from = squareAt(m_dragStart);
-		m_board.setAt(from, m_dragged);
-		QRect oldr = QRect(m_dragPoint, m_theme.size());
-		m_dragged = Empty;
-		update(squareRect(from));
-		update(oldr);
+        Square from = squareAt(m_dragStart);
+        m_board.setAt(from, m_dragged);
+        QRect oldr = QRect(m_dragPoint, m_theme.size());
+        m_dragged = Empty;
+        update(squareRect(from));
+        update(oldr);
         if (s != InvalidSquare)
         {
             if ((m_flags & AllowCopyPiece) && (event->modifiers() & Qt::AltModifier))
@@ -461,9 +461,9 @@ void BoardView::mouseReleaseEvent(QMouseEvent* event)
             else
             {
                 emit moveMade(from, s, button);
-				updateGuess(s);
+                updateGuess(s);
             }
-		}
+        }
         else
         {
             emit invalidMove(from);
@@ -471,9 +471,9 @@ void BoardView::mouseReleaseEvent(QMouseEvent* event)
     }
     else if (m_selectedSquare != InvalidSquare)
     {
-		Square from = m_selectedSquare;
-		unselectSquare();
-		if (s != InvalidSquare)
+        Square from = m_selectedSquare;
+        unselectSquare();
+        if (s != InvalidSquare)
         {
             emit moveMade(from, s, button);
         }
@@ -484,11 +484,11 @@ void BoardView::mouseReleaseEvent(QMouseEvent* event)
         {
             emit moveMade(m_hiFrom, m_hiTo, button);
         }
-		m_hoverSquare = InvalidSquare;
-		// Only update guess if "emit moveMade()" did not pop up a window (eg. promotion)
+        m_hoverSquare = InvalidSquare;
+        // Only update guess if "emit moveMade()" did not pop up a window (eg. promotion)
         if (m_hiFrom != InvalidSquare)
         {
-			updateGuess(s);
+            updateGuess(s);
         }
     }
     else
@@ -496,12 +496,12 @@ void BoardView::mouseReleaseEvent(QMouseEvent* event)
         if (s != InvalidSquare)
         {
             emit clicked(s, button, mapToGlobal(event->pos()), InvalidSquare);
-			if (!m_clickUsed && m_board.isMovable(s))
+            if (!m_clickUsed && m_board.isMovable(s))
             {
-				selectSquare(s);
+                selectSquare(s);
             }
-		}
-	}
+        }
+    }
 }
 
 void BoardView::wheelEvent(QWheelEvent* e)
@@ -517,8 +517,8 @@ void BoardView::wheelEvent(QWheelEvent* e)
 
 void BoardView::setFlipped(bool flipped)
 {
-	m_flipped = flipped;
-	update();
+    m_flipped = flipped;
+    update();
 }
 
 void BoardView::flip()
@@ -529,7 +529,17 @@ void BoardView::flip()
 
 bool BoardView::isFlipped() const
 {
-	return m_flipped;
+    return m_flipped;
+}
+
+int BoardView::gameNumber() const
+{
+    return m_gameNumber;
+}
+
+void BoardView::setGameNumber(int gameNumber)
+{
+    m_gameNumber = gameNumber;
 }
 
 void BoardView::configure()
@@ -540,11 +550,11 @@ void BoardView::configure()
     m_showCurrentMove = AppSettings->getValue("showCurrentMove").toBool();
     m_guessMove = AppSettings->getValue("guessMove").toBool();
     m_minDeltaWheel = AppSettings->getValue("minWheelCount").toInt();
-	AppSettings->endGroup();
+    AppSettings->endGroup();
     m_theme.configure();
     m_theme.setEnabled(isEnabled());
     removeGuess();
-	unselectSquare();
+    unselectSquare();
     if (size().height()>=minimumSize().height())
         resizeBoard(size());
     update();
@@ -552,31 +562,31 @@ void BoardView::configure()
 
 void BoardView::selectSquare(Square s)
 {
-	// You can't select a square when guess move is enabled
-	if (m_guessMove && !(m_flags & SuppressGuessMove))
-		return;
-	if (m_selectedSquare == s)
-		return;
-	unselectSquare();
-	m_selectedSquare = s;
-	update(squareRect(s));
+    // You can't select a square when guess move is enabled
+    if (m_guessMove && !(m_flags & SuppressGuessMove))
+        return;
+    if (m_selectedSquare == s)
+        return;
+    unselectSquare();
+    m_selectedSquare = s;
+    update(squareRect(s));
 }
 
 void BoardView::unselectSquare()
 {
-	Square prev = m_selectedSquare;
-	m_selectedSquare = InvalidSquare;
-	if (prev != InvalidSquare)
+    Square prev = m_selectedSquare;
+    m_selectedSquare = InvalidSquare;
+    if (prev != InvalidSquare)
     {
-		update(squareRect(prev));
+        update(squareRect(prev));
     }
 }
 
 QRect BoardView::squareRect(Square square)
 {
     int coord =  m_coordinates ? CoordinateSize : 0;
-	int x = isFlipped() ? 7 - square % 8 : square % 8;
-	int y = isFlipped() ? square / 8 : 7 - square / 8;
+    int x = isFlipped() ? 7 - square % 8 : square % 8;
+    int y = isFlipped() ? square / 8 : 7 - square / 8;
     return QRect(QPoint(x * m_theme.size().width() + coord,
                         y * m_theme.size().height()),  m_theme.size());
 }
@@ -586,7 +596,7 @@ QRect BoardView::coordinateRectVertical(Square square)
     Q_ASSERT(m_coordinates);
     int x = isFlipped() ? square % 8 : 7 - square % 8;
     return QRect(0, x * m_theme.size().height() + (m_theme.size().height()-CoordinateSize) / 2,
-                        CoordinateSize, CoordinateSize);
+                 CoordinateSize, CoordinateSize);
 }
 
 QRect BoardView::coordinateRectHorizontal(Square square)
@@ -600,13 +610,13 @@ QRect BoardView::coordinateRectHorizontal(Square square)
 
 bool BoardView::canDrag(Square s) const
 {
-	if (m_dragged != Empty) // already dragging
-		return false;
-	if (s == InvalidSquare)
-		return false;
-	else if (m_flags & IgnoreSideToMove)
-		return m_board.pieceAt(s) != Empty;
-	else return m_board.isMovable(s);
+    if (m_dragged != Empty) // already dragging
+        return false;
+    if (s == InvalidSquare)
+        return false;
+    else if (m_flags & IgnoreSideToMove)
+        return m_board.pieceAt(s) != Empty;
+    else return m_board.isMovable(s);
 }
 
 int BoardView::heightForWidth(int width) const

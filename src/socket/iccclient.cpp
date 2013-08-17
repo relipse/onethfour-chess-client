@@ -2,6 +2,9 @@
 #include "chessclient.h"
 
 #include <QRegExp>
+#include <QRegularExpression>
+#include <QRegularExpressionMatch>
+#include <QRegularExpressionMatchIterator>
 #include <QDebug>
 
 using namespace ICC;
@@ -46,35 +49,34 @@ void IccClient::on_receiveText(const QString &data)
     //Examples below:
     //(32 CHENNAIBOND {IM} 1 {wanted to play Rxd8})aics%
     //(32 knightrunner {} 1 {Sir H!})
-    //QString regex = "\\((\\d+) (.+)\\)|([^]+)";
-    QString regex = "\\((\\d+) (.+)\\)|([^]+)";
-    //QRegExp does not allow one paren to be greedy and another to not be greedy
-    //TODO: convert this to Qt5 and use QRegularExpression
-    QRegExp rx(regex);
-    rx.setMinimal(true);
-    int pos = rx.indexIn(data);    // where we are in the string
-    int count = 0;  // how many dgs have been sent
-    if (pos == -1){
-        //there were no dgs in the text, just send as server text
-        emit onNonDatagram(data);
 
-        //TODO: what do we do with plain text in between a datagram?
-        //TODO: or is this even possible?
-    }
-    while (pos >= 0) {
-        pos = rx.indexIn(data, pos);
-        if (pos >= 0) {
-            qDebug() << rx.cap(1) << rx.cap(0) << rx.cap(3);
-            if (!rx.cap(1).isEmpty())
-            {
-                parseDatagram(rx.cap(1).toInt(), rx.cap(0));
-                emit onDatagram(rx.cap(1).toInt(), rx.cap(0));
-            }else if (!rx.cap(3).isEmpty()){
-                //not a datagram
-                emit onNonDatagram(rx.cap(3));
-            }
-            ++pos;      // move along in str
-            ++count;
+    //use a raw string literal so we dont have to double escape for the regex
+    //QString regex = R"x(\((\d+) (.+)\)|([^]+))x";
+    QString regex = "\\((\\d+) (.+?)\\)|([^]+)";
+    qDebug() << regex;
+
+    QRegularExpression rx(regex);
+    QRegularExpressionMatchIterator i  = rx.globalMatch(data);
+
+    /**
+    int pos_start_dg = data.indexOf("(");
+    if (pos_start_dg == -1){
+        //no datagrams, send all to unparsed
+        emit onNonDatagram(data);
+        return;
+    }else if (pos_start_dg > 0){
+        //there is some text prior to the dg, that needs to be a nonDatagram
+        data.at()
+    }**/
+    while (i.hasNext()) {
+        QRegularExpressionMatch match = i.next();
+        qDebug() << match;
+        if (!match.captured(1).isEmpty())
+        {
+           parseDatagram(match.captured(1).toInt(), match.captured(0));
+           emit onDatagram(match.captured(1).toInt(), match.captured(0));
+        }else{ //matched 3
+           emit onNonDatagram(match.captured(3));
         }
     }
 }
@@ -116,6 +118,105 @@ void IccClient::parseDatagram(int dg, const QString &unparsedDg)
         }
     }else if (dg == DG_LOGIN_FAILED){
         emit onLoginFailed();
+    }else if (dg == DG_MY_GAME_STARTED){
+        IccDgGameStarted dgGameStarted;
+
+        if (parseDgGameStarted(unparsedDg, dgGameStarted)){
+            emit onMyGameStarted(dgGameStarted);
+        }else{
+            qDebug() << "error parsing";
+        }
+
+    }else if (dg == DG_GAME_STARTED){
+        IccDgGameStarted dgGameStarted;
+        if (parseDgGameStarted(unparsedDg, dgGameStarted)){
+            emit onGameStarted(dgGameStarted);
+        }else{
+            qDebug() << "error parsing";
+        }
+    }else if (dg == DG_MATCH){
+
+        QRegularExpression re("\\((\\d+)" //start dg
+                              " (?P<challname>[^ ]+) (?P<challrating>\\d+) (?P<challratingtype>\\d) \\{(?P<challtitles>)\\}"
+                              " (?P<receiname>[^ ]+) (?P<receirating>\\d+) (?P<receiratingtype>\\d) \\{(?P<receititles>)\\}"
+                              " (?P<wildnumber>\\d+) (?P<ratingtype>[^ ]+) (?P<israted>\\d) (?P<isadjourned>\\d)"
+                              " (?P<challinitialmin>\\d+) (?P<challincsec>\\d+)"
+                              " (?P<receiverinitialmin>\\d+) (?P<receiverincsec>\\d+)"
+                              " (?P<challcolorrequest>\\-?\\d+)( (?P<assess>[^ ]+ [^ ]+ [^ ]+))?"
+                              " (?P<fancytimecontrol[^ ]+)"
+                              "\\)" //end dg
+                              );
+        QRegularExpressionMatch match = re.match(unparsedDg);
+        qDebug() << "Is a valid match? " << match.isValid()
+                 << "challname: " << match.captured("challname")
+                 << "challrating: " << match.captured("challrating")
+                 << "challratingtype: " << match.captured("challratingtype")
+                 << "challtitles: " << match.captured("challtitles")
+                 << "receiname: " << match.captured("receiname")
+                 << "receirating: " << match.captured("receirating")
+                 << "receiratingtype: " << match.captured("receiratingtype")
+                 << "receititles: " << match.captured("receititles")
+                 << "wildnumber: " << match.captured("wildnumber")
+                 << "ratingtype: " << match.captured("ratingtype")
+                 << "israted: " << match.captured("israted")
+                 << "isadjourned: " << match.captured("isadjourned")
+                 << "challinitialmin: " << match.captured("challinitialmin")
+                 << "challincsec: " << match.captured("challincsec")
+                 << "receiverinitialmin: " << match.captured("receiverinitialmin")
+                 << "receiverincsec: " << match.captured("receiverincsec")
+                 << "challcolorrequest: " << match.captured("challcolorrequest")
+                 << "assess: " << match.captured("assess");
+
+
+        /*
+         *(29 TwoEqualsOne 1373 2 {} relipse 1733 1 {} 0 Bullet 0 0 1 0 1 0 -1 {}) Challenge: TwoEqualsOne (1373) relipse (1733) unrated Bullet 1 0 You may accept this with "accept TwoEqualsOne", decline it with "decline TwoEqualsOne", or propose different parameters. aics%
+DG_MATCH(29 TwoEqualsOne 1373 2 {} relipse 1733 1 {} 0 Bullet 0 0 1 0 1 0 -1 {})
+(11 vicilio E 858)
+DG_STATE(11 vicilio E 858)
+Creating: TwoEqualsOne (1373) relipse (1733) unrated Bullet 1 0 You accept the challenge of TwoEqualsOne. (30 TwoEqualsOne relipse {You accept the challenge of TwoEqualsOne. }){Game 959 (relipse vs. TwoEqualsOne) Creating unrated bullet match.} * relipse vs TwoEqualsOne White> win loss draw score | win loss draw score
+DG_PLAYERS_IN_MY_GAME(20 959 TwoEqualsOne PB 1)
+DG_MY_GAME_STARTED(15 959 relipse TwoEqualsOne 0 Bullet 0 1 0 1 0 1 {} 1733 1373 1624455577 {} {} 0 0 0 {} 0)
+DG_MY_RELATION_TO_GAME(43 959 PW)
+DG_PLAYERS_IN_MY_GAME(20 959 relipse PW 1)
+DG_FLIP(39 959 0)
+DG_MOVE_LIST(25 959 * )
+DG_SET_CLOCK(38 959 60 60)
+aics%
+aics%
+Game 959 (relipse vs. TwoEqualsOne)(24 959 e4 e2e4 23 37) --------------------------------- 8 | *R| *N| *B| *Q| *K| *B| *N| *R| Move # : 1 (Black) |---+---+---+---+---+---+---+---| 7 | *P| *P| *P| *P| *P| *P| *P| *P| White Moves : 'e4 (0:23)' |---+---+---+---+---+---+---+---| 6 | | | | | | | | | |---+---+---+---+---+---+---+---| 5 | | | | | | | | | Black Clock : 1 : 00 |---+---+---+---+---+---+---+---| 4 | | | | | P | | | | White Clock : 0 : 37 |---+---+---+---+---+---+---+---| 3 | | | | | | | | | Black Strength : 39 |---+---+---+---+---+---+---+---| 2 | P | P | P | P | | P | P | P | White Strength : 39 |---+---+---+---+---+---+---+---| 1 | R | N | B | Q | K | B | N | R | --------------------------------- a b c d e f g h aics%
+DG_SEND_MOVES(24 959 e4 e2e4 23 37)
+Game 959 (relipse vs. TwoEqualsOne)(24 959 c5 c7c5 3 57) --------------------------------- 8 | *R| *N| *B| *Q| *K| *B| *N| *R| Move # : 2 (White) |---+---+---+---+---+---+---+---| 7 | *P| *P| | *P| *P| *P| *P| *P| Black Moves : 'c5 (0:03)' |---+---+---+---+---+---+---+---| 6 | | | | | | | | | |---+---+---+---+---+---+---+---| 5 | | | *P| | | | | | Black Clock : 0 : 57 |---+---+---+---+---+---+---+---| 4 | | | | | P | | | | White Clock : 0 : 37 |---+---+---+---+---+---+---+---| 3 | | | | | | | | | Black Strength : 39 |---+---+---+---+---+---+---+---| 2 | P | P | P | P | | P | P | P | White Strength : 39 |---+---+---+---+---+---+---+---| 1 | R | N | B | Q | K | B | N | R | --------------------------------- a b c d e f g h aics%
+DG_SEND_MOVES(24 959 c5 c7c5 3 57)
+Game 959 (relipse vs. TwoEqualsOne)(24 959 e5 e4e5 7 31) --------------------------------- 8 | *R| *N| *B| *Q| *K| *B| *N| *R| Move # : 2 (Black) |---+---+---+---+---+---+---+---| 7 | *P| *P| | *P| *P| *P| *P| *P| White Moves : 'e5 (0:07)' |---+---+---+---+---+---+---+---| 6 | | | | | | | | | |---+---+---+---+---+---+---+---| 5 | | | *P| | P | | | | Black Clock : 0 : 57 |---+---+---+---+---+---+---+---| 4 | | | | | | | | | White Clock : 0 : 31 |---+---+---+---+---+---+---+---| 3 | | | | | | | | | Black Strength : 39 |---+---+---+---+---+---+---+---| 2 | P | P | P | P | | P | P | P | White Strength : 39 |---+---+---+---+---+---+---+---| 1 | R | N | B | Q | K | B | N | R | --------------------------------- a b c d e f g h aics%
+DG_SEND_MOVES(24 959 e5 e4e5 7 31)
+Game 959 (relipse vs. TwoEqualsOne)(24 959 Nc6 b8c6 2 56) --------------------------------- 8 | *R| | *B| *Q| *K| *B| *N| *R| Move # : 3 (White) |---+---+---+---+---+---+---+---| 7 | *P| *P| | *P| *P| *P| *P| *P| Black Moves : 'Nc6 (0:02)' |---+---+---+---+---+---+---+---| 6 | | | *N| | | | | | |---+---+---+---+---+---+---+---| 5 | | | *P| | P | | | | Black Clock : 0 : 56 |---+---+---+---+---+---+---+---| 4 | | | | | | | | | White Clock : 0 : 31 |---+---+---+---+---+---+---+---| 3 | | | | | | | | | Black Strength : 39 |---+---+---+---+---+---+---+---| 2 | P | P | P | P | | P | P | P | White Strength : 39 |---+---+---+---+---+---+---+---| 1 | R | N | B | Q | K | B | N | R | --------------------------------- a b c d e f g h aics%
+DG_SEND_MOVES(24 959 Nc6 b8c6 2 56)
+{Game 959 (relipse vs. TwoEqualsOne) relipse resigns} 0-1 (16 959 1 Res 0-1 {White resigns} {B20})Game was not rated. No rating adjustment. Entering examine mode for game 959. (20 959 TwoEqualsOne X 1)(43 959 E)(20 959 relipse E 1)aics%
+DG_MY_GAME_RESULT(16 959 1 Res 0-1 {White resigns} {B20})
+DG_PLAYERS_IN_MY_GAME(20 959 TwoEqualsOne X 1)
+DG_MY_RELATION_TO_GAME(43 959 E)
+DG_PLAYERS_IN_MY_GAME(20 959 relipse E 1)
+(32 TwoEqualsOne {} 1 {hope that helped})aics%
+DG_SHOUT(32 TwoEqualsOne {} 1 {hope that helped})
+(32 ROBOadmin {* C} 2 {*** GRANDMASTER Bones is playing string!! Type "observe Bones" to watch the rated 15-minute 15 0 game.})aics%
+DG_SHOUT(32 ROBOadmin {* C} 2 {*** GRANDMASTER Bones is playing string!! Type "observe Bones" to watch the rated 15-minute 15 0 game.})
+(32 relipse {} 0 {yes it did a lot thanks})(shouted to 124 people) aics%
+DG_SHOUT(32 relipse {} 0 {yes it did a lot thanks})
+Recent games of relipse: Opponent Type ECO End Date 57: - 1733 W 1373 TwoEqualsOne [ Bu 1 0] B20 Res Aug 17 13 04:19 56: - 1541 B 1490 digital [ or 1 0] A00 Mat Aug 17 13 02:10 55: + 1557 B 1434 nearthink [ Mr 3 0] C02 Fla Aug 17 13 00:40 54: + 1546 W 1611 Lzmann [ Mr 3 0] E71 Res Aug 17 13 00:38 53: + 1525 W 1611 KINGZINSKI [ Mr 3 0] D15 Res Aug 17 13 00:33 52: + 1503 B 1678 Coyote-Breat [ Mr 3 0] A01 Fla Aug 17 13 00:27 51: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:32 50: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:31 49: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:30 48: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:30 47: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:30 46: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:21 45: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:20 44: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:18 43: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:17 42: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:17 41: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:17 40: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:16 39: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:15 38: + 1827 W 1600 TrainingBot [20u 20 10] --- Mat Aug 16 13 21:15 aics%
+(32 ROBOadmin {* C} 2 {http://www.chessclub.com/activities/events.html for a list of all the upcoming events on the Internet Chess Club!})aics%
+DG_SHOUT(32 ROBOadmin {* C} 2 {http://www.chessclub.com/activities/events.html for a list of all the upcoming events on the Internet Chess Club!})
+(32 ROBOadmin {* C} 2 {*** GRANDMASTER YARDBIRD is playing Nikola511!! Type "observe YARDBIRD" to watch the rated 5-minute 5 0 game.})aics%
+DG_SHOUT(32 ROBOadmin {* C} 2 {*** GRANDMASTER YARDBIRD is playing Nikola511!! Type "observe YARDBIRD" to watch the rated 5-minute 5 0 game.})
+(32 ROBOadmin {* C} 2 {*** GRANDMASTER strongwave is playing Kiketf!! Type "observe strongwave" to watch the rated 3-minute 3 0 game.})aics%
+DG_SHOUT(32 ROBOadmin {* C} 2 {*** GRANDMASTER strongwave is playing Kiketf!! Type "observe strongwave" to watch the rated 3-minute 3 0 game.})
+(32 ROBOKieb {C TD} 0 {Find out your ratings in the various Wild variants! Type: 'tell ROBOKieb wildfinger'.})aics%
+DG_SHOUT(32 ROBOKieb {C TD} 0 {Find out your ratings in the various Wild variants! Type: 'tell ROBOKieb wildfinger'.})
+(20 959 TwoEqualsOne O 1)
+DG_PLAYERS_IN_MY_GAME(20 959 TwoEqualsOne O 1)
+Notification: PTrajkovic has departed. Notification: PTrajkovic has arrived. aics%
+(20 959 TwoEqualsOne X 1)
+DG_PLAYERS_IN_MY_GAME(20 959 TwoEqualsOne X 1)
+(11 vicilio E 1203)*/
     }else{
         //TODO: finish parsing the rest
         //not specifically parsed emit this so clients can parse it
@@ -124,6 +225,61 @@ void IccClient::parseDatagram(int dg, const QString &unparsedDg)
     }
     //if execution goes here, that means it successfully parsed and emitted the proper signal
     emit onParseSuccessDatagram(dg, unparsedDg);
+}
+
+bool IccClient::parseDgGameStarted(const QString& unparsedDg, IccDgGameStarted &dgGameStarted)
+{
+    //relipse(1): what characters are allowed in handles? letters and numbers only?
+    //Andrey(H)(1): Up to 15 characters, letters and numbers, starting with a letter, and one hyphen allowed in the middle.  See "help username" for more details.  :)
+
+    //"DG_MY_GAME_STARTED"  received:
+    //(15 313 relipse relipse 0 Blitz 0 2 12 2 12 0 {Ex: scratch} 0 0 1624451647 {} {} 0 0 0 ? 0)
+    QRegularExpression re("\\((?P<dg>\\d+)" //start of dg
+                                " (?P<gamenumber>\\d+)"
+                                " (?P<whitename>[^ ]+) (?P<blackname>[^ ]+)"
+                                " (?P<wildnumber>\\d+) (?P<ratingtype>[^ ]+) (?P<rated>\\d+)"
+                                " (?P<whiteinitialmin>\\d+) (?P<whiteincsec>\\d+)"
+                                " (?P<blackinitialmin>\\d+) (?P<blackincsec>\\d+)"
+                                " (?P<playedgame>\\d)"
+                                " \\{(?P<examinestring>[^]+?)\\}"
+                                " (?P<whiterating>\\d+)"
+                                " (?P<blackrating>\\d+)"
+                                " (?P<gameid>\\d+) \\{(?P<whitetitles>[^\\}]+)\\} \\{(?P<blacktitles>[^\\}]+)\\}"
+                                " (?P<irregularlegality>\\d) (?P<irregularsemantics>\\d)"
+                                " (?P<usesplunkers>\\d) (?P<fancytimecontrol>[^ ]+)"
+                                " (?P<promotetoking>\\d)"
+                            "\\)" //end of dg
+                          ,  QRegularExpression::CaseInsensitiveOption);
+
+
+    QRegularExpressionMatchIterator i  = re.globalMatch(unparsedDg);
+    while (i.hasNext()) {
+        QRegularExpressionMatch match = i.next();
+        qDebug() << "REGEX MATCH GAME_STARTED:" <<  match;
+        dgGameStarted.dg = match.captured("dg").toInt();
+        dgGameStarted.gamenumber = match.captured("gamenumber").toLong();
+        dgGameStarted.whitename = match.captured("whitename");
+        dgGameStarted.blackname = match.captured("blackname");
+        dgGameStarted.wild_number = match.captured("wildnumber").toInt();
+        dgGameStarted.white_initial = match.captured("whiteinitialmin").toInt();
+        dgGameStarted.white_increment = match.captured("whiteincsec").toInt();
+        dgGameStarted.black_initial = match.captured("blackinitialmin").toInt();
+        dgGameStarted.black_increment = match.captured("blackincsec").toInt();
+        dgGameStarted.played_game = (bool)match.captured("playedgame").toInt();
+        dgGameStarted.ex_string = match.captured("examinestring");
+        dgGameStarted.white_rating = match.captured("whiterating").toInt();
+        dgGameStarted.black_rating = match.captured("blackrating").toInt();
+        dgGameStarted.game_id = match.captured("gameid").toInt();
+        dgGameStarted.white_titles = match.captured("whitetitles");
+        dgGameStarted.black_titles = match.captured("blacktitles");
+        dgGameStarted.irregular_legality = (bool)match.captured("irregularlegality").toInt();
+        dgGameStarted.irregular_semantics = (bool)match.captured("irregularsemantics").toInt();
+        dgGameStarted.uses_plunkers = (bool)match.captured("usesplunkers").toInt();
+        dgGameStarted.fancy_timecontrol = match.captured("fancytimecontrol");
+        dgGameStarted.promote_to_king = (bool)match.captured("promotetoking").toInt();
+        return true;
+    }
+    return false;
 }
 
 void IccClient::SetUsername(const QString &username)

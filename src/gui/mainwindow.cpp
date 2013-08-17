@@ -206,6 +206,7 @@ MainWindow::MainWindow() : QMainWindow(),
     connect(m_chessClient, SIGNAL(onNonDatagram(int,QString)), this, SLOT(slotReceiveServerNonDatagram(int, QString)));
     connect(m_chessClient, SIGNAL(onDatagram(int,QString)), this, SLOT(slotReceiveServerData(int, QString)));
     connect(m_chessClient, SIGNAL(onTell(QString, QString, int, QString)), this, SLOT(slotOnTell(QString, QString, int, QString)));
+    connect(m_chessClient, SIGNAL(onMyGameStarted(IccDgGameStarted)), this, SLOT(slotMyGameStarted(IccDgGameStarted)));
 
 
     dlgConnect = new DlgConnectToChessServer(this);
@@ -417,6 +418,16 @@ MainWindow::~MainWindow()
 	delete m_saveDialog;
 	delete m_output;
     m_boardViews.clear(); // Widgets are deleted by Qt
+}
+
+void MainWindow::slotMyGameStarted(const IccDgGameStarted& dgMyGameStarted){
+    if (dgMyGameStarted.played_game){
+        //TODO: disable all computers and engines, unless player has (C)omputer tag
+        //TODO: play ding sound
+    }
+
+    CreateBoardViewByServerGameStarted(dgMyGameStarted);
+
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)

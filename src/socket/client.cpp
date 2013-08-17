@@ -56,6 +56,11 @@ void Client::send(const QString& sbuffer)
     socket->flush();
 }
 
+bool Client::connected()
+{
+   return socket->isOpen();
+}
+
 void Client::send(const char* buffer){
     socket->write(buffer);
     socket->flush();

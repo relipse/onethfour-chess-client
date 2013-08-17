@@ -63,6 +63,11 @@ public:
     /** Get a reference to the database to which the current view is associated */
     int dbIndex() const;
 
+
+
+    int gameNumber() const;
+    void setGameNumber(int gameNumber);
+
 public slots:
 
     /** Flips/unflips board. */
@@ -172,6 +177,7 @@ private:
     unsigned int m_moveListCurrent;
     bool m_showMoveIndicator;
     int m_DbIndex;
+    int m_gameNumber;
 };
 
 class BoardViewMimeData : public QMimeData

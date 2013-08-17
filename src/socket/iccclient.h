@@ -9,6 +9,63 @@ class QTcpSocket;
 
 #include "chessclient.h"
 
+
+/*
+DG_WHO_AM_Irelipse {}
+(31 relipse {} {hi} 1)(told relipse) aics%
+DG_PERSONAL_TELLrelipse {} {hi} 1
+Messages: 1. Canon (05:20 15-Aug-13 EDT): Sorry for the delay in replying to your question. I would suggest you email support@chessclub.com who may be able to assist you with your query. Thank you. aics%
+(15 918 relipse relipse 0 Blitz 0 2 12 2 12 0 {Ex: scratch} 0 0 1624436053 {} {} 0 0 0 ? 0)(43 918 E)(20 918 relipse E 1)(39 918 0)(25 918 * ) --------------------------------- 8 | *R| *N| *B| *Q| *K| *B| *N| *R| Move # : 1 (White) |---+---+---+---+---+---+---+---| 7 | *P| *P| *P| *P| *P| *P| *P| *P| |---+---+---+---+---+---+---+---| 6 | | | | | | | | | |---+---+---+---+---+---+---+---| 5 | | | | | | | | | Black Clock : 2 : 00 |---+---+---+---+---+---+---+---| 4 | | | | | | | | | White Clock : 2 : 00 |---+---+---+---+---+---+---+---| 3 | | | | | | | | | Black Strength : 39 |---+---+---+---+---+---+---+---| 2 | P | P | P | P | P | P | P | P | White Strength : 39 |---+---+---+---+---+---+---+---| 1 | R | N | B | Q | K | B | N | R | --------------------------------- a b c d e f g h aics%
+DG_MY_GAME_STARTED918 relipse relipse 0 Blitz 0 2 12 2 12 0 {Ex: scratch} 0 0 1624436053 {} {} 0 0 0 ? 0)(43 918 E)(20 918 relipse E 1)(39 918 0)(25 918 *
+(24 918 e4 e2e4 0 132)Game 918: relipse moves: e4 Game 918 (relipse vs. relipse) --------------------------------- 8 | *R| *N| *B| *Q| *K| *B| *N| *R| Move # : 1 (Black) |---+---+---+---+---+---+---+---| 7 | *P| *P| *P| *P| *P| *P| *P| *P| White Moves : 'e4 (0:00)' |---+---+---+---+---+---+---+---| 6 | | | | | | | | | |---+---+---+---+---+---+---+---| 5 | | | | | | | | | Black Clock : 2 : 00 |---+---+---+---+---+---+---+---| 4 | | | | | P | | | | White Clock : 2 : 12 |---+---+---+---+---+---+---+---| 3 | | | | | | | | | Black Strength : 39 |---+---+---+---+---+---+---+---| 2 | P | P | P | P | | P | P | P | White Strength : 39 |---+---+---+---+---+---+---+---| 1 | R | N | B | Q | K | B | N | R | --------------------------------- a b c d e f g h aics%
+DG_SEND_MOVES918 e4 e2e4 0 132
+(24 918 e5 e7e5 3 129)Game 918: relipse moves: e5 Game 918 (relipse vs. relipse) --------------------------------- 8 | *R| *N| *B| *Q| *K| *B| *N| *R| Move # : 2 (White) |---+---+---+---+---+---+---+---| 7 | *P| *P| *P| *P| | *P| *P| *P| Black Moves : 'e5 (0:03)' |---+---+---+---+---+---+---+---| 6 | | | | | | | | | |---+---+---+---+---+---+---+---| 5 | | | | | *P| | | | Black Clock : 2 : 09 |---+---+---+---+---+---+---+---| 4 | | | | | P | | | | White Clock : 2 : 12 |---+---+---+---+---+---+---+---| 3 | | | | | | | | | Black Strength : 39 |---+---+---+---+---+---+---+---| 2 | P | P | P | P | | P | P | P | White Strength : 39 |---+---+---+---+---+---+---+---| 1 | R | N | B | Q | K | B | N | R | --------------------------------- a b c d e f g h aics%
+DG_SEND_MOVES918 e5 e7e5 3 129
+(42 918 e6 2)Illegal move (e6). aics%
+DG_ILLEGAL_MOVE918 e6 2
+(gamenumber whitename blackname wild-number rating-type rated
+        white-initial white-increment black-initial black-increment
+        played-game {ex-string} white-rating black-rating game-id
+        white-titles black-titles irregular-legality irregular-semantics
+        uses-plunkers fancy-timecontrol promote-to-king)  */
+
+
+struct IccDgGameStarted
+{
+    int dg; //could be 12 or 15 depending on whether it is my game or someone elses
+    long int gamenumber;
+    QString whitename;
+    QString blackname;
+    int wild_number;
+    QString rating_type;
+    bool rated;
+    //DG_MY_GAME_STARTED918 relipse relipse 0 Blitz 0
+    //2 12 2 12
+    //0 {Ex: scratch} 0 0 1624436053 {} {}
+    //0 0 0 ? 0)
+
+    int white_initial;
+    int white_increment;
+    int black_initial;
+    int black_increment;
+
+    bool played_game;
+    QString ex_string;
+    int white_rating;
+    int black_rating;
+    QString game_id;  //an int is too small, just use QString
+
+    QString white_titles;
+    QString black_titles;
+
+    bool irregular_legality;
+    bool irregular_semantics;
+
+    bool uses_plunkers;
+    QString fancy_timecontrol;
+    bool promote_to_king;
+};
+
 class IccClient : public ChessClient
 {
     Q_OBJECT
@@ -29,7 +86,7 @@ class IccClient : public ChessClient
     virtual void on_receiveText(const QString& data);
 
 public:
-    virtual void parseDatagram(int dg, const QString& unparsedDg);
+
 
    signals:
     void onError(QAbstractSocket::SocketError error);
@@ -54,7 +111,8 @@ public:
     void onLoggedIn(const QString& myHandle, const QString& myTitles);
     void onLoginFailed();
     void onTell(const QString& fromHandle, const QString& fromTitles, int type, const QString& text);
-
+    void onMyGameStarted(const IccDgGameStarted& dgMyGameStarted);
+    void onGameStarted(const IccDgGameStarted& dgGameStarted);
 public:
     void SetUsername(const QString& username);
     void SetPassword(const QString& password);
@@ -62,6 +120,8 @@ public:
     const QString&  loggedInHandle();
     const QString&  lastTellFrom();
 
+    void parseDatagram(int dg, const QString& unparsedDg);
+    bool parseDgGameStarted(const QString &unparsedDg, IccDgGameStarted &dgGameStarted);
 protected:
     QString m_level2settings;
     QString m_username;

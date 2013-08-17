@@ -70,6 +70,9 @@ public:
 
     static const int MaxRecentFiles = 10;
 
+
+    BoardView* CreateBoardViewByServerGameStarted(const IccDgGameStarted &dgMyGameStarted);
+    BoardView *GetBoardByServerGameNumber(int game_number);
 protected:
 	/** QObjects Eventfilter for QApplication events */
 	bool eventFilter(QObject *obj, QEvent *event);
@@ -106,6 +109,7 @@ protected:
 	/** Save Game dialog (created when used first) */
 	SaveDialog* saveDialog();
 public slots:
+
     /** Open database */
     void openDatabase(QString fname);
     /** Open database from URL*/
@@ -326,6 +330,8 @@ public slots:
     void slotConnectToChessServer();
 
     void slotChessServerSocketError(QAbstractSocket::SocketError error);
+
+    void slotMyGameStarted(const IccDgGameStarted &dgMyGameStarted);
 protected slots:
     /** Receiver for a failed loading of a database */
     void loadError(QUrl url);

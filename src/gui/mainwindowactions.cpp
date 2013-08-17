@@ -482,6 +482,7 @@ void MainWindow::slotBoardMove(Square from, Square to, int button)
 {
     const Board& board = game().board();
     Move m(board.prepareMove(from, to));
+
     if (m.isLegal())
     {
         PieceType promotionPiece = None;
@@ -497,7 +498,11 @@ void MainWindow::slotBoardMove(Square from, Square to, int button)
             promotionPiece = PieceType(Queen + index);
             m.setPromotionPiece(promotionPiece);
         }
-
+        //automatically send move to server if connected
+        //TODO: do we really want to do this?
+        if (m_chessClient->connected()){
+            m_chessClient->send(m.toAlgebraic()+"\n");
+        }
         // Use an existing move with the correct promotion piece type if it already exists
         if( game().findNextMove(from,to,promotionPiece))
         {
@@ -1499,7 +1504,7 @@ void MainWindow::slotReceiveServerData(int dg, const QString &unparsedDg)
 
 void MainWindow::slotReceiveServerNonDatagram(const QString &text)
 {
-    m_consoleWidget->AddLine(text);
+    m_consoleWidget->AddLine(text, "green");
 }
 
 void MainWindow::slotOnTell(const QString &from, const QString &titles, int type, const QString &text)
@@ -1606,6 +1611,35 @@ void MainWindow::slotRedArrowHere()
     game().appendArrowAnnotation(m_annotationSquare, m_annotationSquareFrom, 'R');
     slotGameChanged();
 }
+
+//this is helpful so we know where the move took place
+BoardView* MainWindow::GetBoardByServerGameNumber(int game_number){
+    for (int i = 0; i < m_boardViews.size(); ++i){
+        if (m_boardViews[i]->gameNumber() == game_number){
+            return m_boardViews[i];
+        }
+    }
+    return NULL;
+}
+
+BoardView* MainWindow::CreateBoardViewByServerGameStarted(const IccDgGameStarted& dgMyGameStarted)
+{
+    BoardView* boardView = new BoardView(m_tabWidget);
+    boardView->setMinimumSize(200, 200);
+    boardView->configure();
+    boardView->setBoard(standardStartBoard);
+    boardView->setDbIndex(m_currentDatabase);
+    boardView->setGameNumber(dgMyGameStarted.gamenumber);
+    m_boardViews.push_back(boardView);
+    m_tabWidget->addTab(boardView,QString("%1 vs %2 #%3")
+            .arg(dgMyGameStarted.whitename)
+            .arg(dgMyGameStarted.blackname)
+            .arg(dgMyGameStarted.gamenumber)
+    );
+    m_tabWidget->setCurrentIndex(m_boardViews.count()-1);
+    return boardView;
+}
+
 
 BoardView* MainWindow::CreateBoardView()
 {

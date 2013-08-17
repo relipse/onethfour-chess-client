@@ -14,6 +14,8 @@ class Client : public QObject
     void connect(const QString& host, int port);
     void send(const char *buffer);
     void send(const QString &sbuffer);
+
+    bool connected();
 public slots:
     //when the client gets connected to the server
     virtual void on_connected();
