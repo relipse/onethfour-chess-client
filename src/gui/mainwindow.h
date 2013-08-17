@@ -332,6 +332,7 @@ public slots:
     void slotChessServerSocketError(QAbstractSocket::SocketError error);
 
     void slotMyGameStarted(const IccDgGameStarted &dgMyGameStarted);
+    void slotMyRelationToGame(int game_number, const QString& symbol);
 protected slots:
     /** Receiver for a failed loading of a database */
     void loadError(QUrl url);

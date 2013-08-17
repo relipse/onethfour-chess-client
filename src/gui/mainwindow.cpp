@@ -206,9 +206,12 @@ MainWindow::MainWindow() : QMainWindow(),
     connect(m_chessClient, SIGNAL(onNonDatagram(int,QString)), this, SLOT(slotReceiveServerNonDatagram(int, QString)));
     connect(m_chessClient, SIGNAL(onDatagram(int,QString)), this, SLOT(slotReceiveServerData(int, QString)));
     connect(m_chessClient, SIGNAL(onTell(QString, QString, int, QString)), this, SLOT(slotOnTell(QString, QString, int, QString)));
+
+    //onmatch
     connect(m_chessClient, SIGNAL(onMyGameStarted(IccDgGameStarted)), this, SLOT(slotMyGameStarted(IccDgGameStarted)));
-
-
+    connect(m_chessClient, SIGNAL(onMyRelationToGame(int,QString&)), this, SLOT(slotMyRelationToGame(int, QString&)));
+    //void onMyRelationToGame(int game_number, QString& symbol);
+    connect(m_chessClient, SIGNAL(onSendMoves(int,QString,QString,int,int,bool)), this, SLOT(slotSendMoves));
     dlgConnect = new DlgConnectToChessServer(this);
     connect(dlgConnect->ui->btnConnect, SIGNAL(clicked()), this, SLOT(slotConnectToChessServer()));
     connect(dlgConnect->ui->btnCancel, SIGNAL(clicked()), this, SLOT(slotCancelConnect()));
@@ -426,7 +429,60 @@ void MainWindow::slotMyGameStarted(const IccDgGameStarted& dgMyGameStarted){
         //TODO: play ding sound
     }
 
+    if (m_serverGames.contains(dgMyGameStarted.gamenumber)){
+        qDebug() << "Critical error game already exists for some odd reason with game started";
+        return;
+    }
+    //add a Game and a BoardView
+    m_serverGames.insert(dgMyGameStarted.gamenumber, Game());
     CreateBoardViewByServerGameStarted(dgMyGameStarted);
+}
+/*
+ *O=observing
+    PW=playing white
+    PB=playing black
+    SW=playing simul and is white
+    SB=playing simul and is black
+    E=Examining
+    X=None (has left the table)   */
+
+//flip the board depnding on what's going on
+void MainWindow::slotMyRelationToGame(int game_number, const QString &symbol)
+{
+    BoardView* board = GetBoardByServerGameNumber(game_number);
+    if (!board){
+        qDebug() << "serious error cannot find game";
+        return;
+    }
+    if (symbol == "PW" || symbol == "SW"){
+        board->setFlipped(false);
+    }else if (symbol == "PB" || symbol == "SB"){
+        board->setFlipped(true);
+    }//otherwise don't change if the board is flipped or not
+
+    if (symbol == "X"){
+        board->close();
+        qDebug() << "board " << game_number << " closed";
+    }
+}
+
+void MainWindow::slotSendMoves(long game_number, const QString &algebraic, const QString &smith, int timetaken, int clock, bool is_variation)
+{
+    BoardView* board = GetBoardByServerGameNumber(game_number);
+    if (m_serverGames.contains(game_number)){
+        Game& g =  m_serverGames[game_number];
+        Move m(g.board().parseMove(algebraic));
+        //who cares if the move is legal, just do it
+        if (g.atLineEnd())
+        {
+            g.addMove(m);
+        }else{
+            //if we are in the middle of a variation
+            g.addVariation(m);
+            g.forward();
+        }
+        slotServerGameMoveChanged(game_number);
+    }
 
 }
 
@@ -528,6 +584,8 @@ DatabaseInfo* MainWindow::databaseInfo()
 {
 	return m_databases[m_currentDatabase];
 }
+
+
 
 const DatabaseInfo* MainWindow::databaseInfo() const
 {

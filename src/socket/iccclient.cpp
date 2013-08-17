@@ -135,17 +135,8 @@ void IccClient::parseDatagram(int dg, const QString &unparsedDg)
             qDebug() << "error parsing";
         }
     }else if (dg == DG_MATCH){
-
-        QRegularExpression re("\\((\\d+)" //start dg
-                              " (?P<challname>[^ ]+) (?P<challrating>\\d+) (?P<challratingtype>\\d) \\{(?P<challtitles>)\\}"
-                              " (?P<receiname>[^ ]+) (?P<receirating>\\d+) (?P<receiratingtype>\\d) \\{(?P<receititles>)\\}"
-                              " (?P<wildnumber>\\d+) (?P<ratingtype>[^ ]+) (?P<israted>\\d) (?P<isadjourned>\\d)"
-                              " (?P<challinitialmin>\\d+) (?P<challincsec>\\d+)"
-                              " (?P<receiverinitialmin>\\d+) (?P<receiverincsec>\\d+)"
-                              " (?P<challcolorrequest>\\-?\\d+)( (?P<assess>[^ ]+ [^ ]+ [^ ]+))?"
-                              " (?P<fancytimecontrol[^ ]+)"
-                              "\\)" //end dg
-                              );
+        QString regex = "\\((\\d+) (?P<challname>[^ ]+) (?P<challrating>\\d+) (?P<challratingtype>\\d) \\{(?P<challtitles>)\\} (?P<receiname>[^ ]+) (?P<receirating>\\d+) (?P<receiratingtype>\\d) \{(?P<receititles>)\} (?P<wildnumber>\\d+) (?P<ratingtype>[^ ]+) (?P<israted>\\d) (?P<isadjourned>\\d) (?P<challinitialmin>\\d+) (?P<challincsec>\\d+) (?P<receiverinitialmin>\\d+) (?P<receiverincsec>\\d+) (?P<challcolorrequest>\\-?\\d+)( (?P<assess>[^ ]+ [^ ]+ [^ ]+))? (?P<fancytimecontrol>[^ ]+)\\)";
+        QRegularExpression re(regex);
         QRegularExpressionMatch match = re.match(unparsedDg);
         qDebug() << "Is a valid match? " << match.isValid()
                  << "challname: " << match.captured("challname")
@@ -167,7 +158,28 @@ void IccClient::parseDatagram(int dg, const QString &unparsedDg)
                  << "challcolorrequest: " << match.captured("challcolorrequest")
                  << "assess: " << match.captured("assess");
 
+        IccDgMatch dgMatch;
 
+        dgMatch.challname = match.captured("challname");
+        dgMatch.challrating = match.captured("challrating").toInt();
+        dgMatch.challratingtype = match.captured("challratingtype").toInt();
+        dgMatch.challtitles = match.captured("challtitles");
+        dgMatch.receiname = match.captured("receiname");
+        dgMatch.receirating = match.captured("receirating").toInt();
+        dgMatch.receiratingtype = match.captured("receiratingtype").toInt();
+        dgMatch.receititles = match.captured("receititles");
+        dgMatch.wildnumber = match.captured("wildnumber").toInt();
+        dgMatch.ratingtype = match.captured("ratingtype");
+        dgMatch.israted = (bool)match.captured("israted").toInt();
+        dgMatch.isadjourned = (bool)match.captured("isadjourned").toInt();
+        dgMatch.challinitialmin = match.captured("challinitialmin").toInt();
+        dgMatch.challincsec = match.captured("challincsec").toInt();
+        dgMatch.receiverinitialmin = match.captured("receiverinitialmin").toInt();
+        dgMatch.receiverincsec = match.captured("receiverincsec").toInt();
+        dgMatch.challcolorrequest = match.captured("challcolorrequest").toInt();
+        dgMatch.assess = match.captured("assess");
+
+        emit onMatch(dgMatch);
         /*
          *(29 TwoEqualsOne 1373 2 {} relipse 1733 1 {} 0 Bullet 0 0 1 0 1 0 -1 {}) Challenge: TwoEqualsOne (1373) relipse (1733) unrated Bullet 1 0 You may accept this with "accept TwoEqualsOne", decline it with "decline TwoEqualsOne", or propose different parameters. aics%
 DG_MATCH(29 TwoEqualsOne 1373 2 {} relipse 1733 1 {} 0 Bullet 0 0 1 0 1 0 -1 {})
@@ -234,23 +246,8 @@ bool IccClient::parseDgGameStarted(const QString& unparsedDg, IccDgGameStarted &
 
     //"DG_MY_GAME_STARTED"  received:
     //(15 313 relipse relipse 0 Blitz 0 2 12 2 12 0 {Ex: scratch} 0 0 1624451647 {} {} 0 0 0 ? 0)
-    QRegularExpression re("\\((?P<dg>\\d+)" //start of dg
-                                " (?P<gamenumber>\\d+)"
-                                " (?P<whitename>[^ ]+) (?P<blackname>[^ ]+)"
-                                " (?P<wildnumber>\\d+) (?P<ratingtype>[^ ]+) (?P<rated>\\d+)"
-                                " (?P<whiteinitialmin>\\d+) (?P<whiteincsec>\\d+)"
-                                " (?P<blackinitialmin>\\d+) (?P<blackincsec>\\d+)"
-                                " (?P<playedgame>\\d)"
-                                " \\{(?P<examinestring>[^]+?)\\}"
-                                " (?P<whiterating>\\d+)"
-                                " (?P<blackrating>\\d+)"
-                                " (?P<gameid>\\d+) \\{(?P<whitetitles>[^\\}]+)\\} \\{(?P<blacktitles>[^\\}]+)\\}"
-                                " (?P<irregularlegality>\\d) (?P<irregularsemantics>\\d)"
-                                " (?P<usesplunkers>\\d) (?P<fancytimecontrol>[^ ]+)"
-                                " (?P<promotetoking>\\d)"
-                            "\\)" //end of dg
+    QRegularExpression re("\\((?P<dg>\\d+) (?P<gamenumber>\\d+) (?P<whitename>[^ ]+) (?P<blackname>[^ ]+) (?P<wildnumber>\\d+) (?P<ratingtype>[^ ]+) (?P<rated>\\d) (?P<whiteinitialmin>\\d+) (?P<whiteincsec>\\d+) (?P<blackinitialmin>\\d+) (?P<blackincsec>\\d+) (?P<playedgame>\\d) \\{(?P<examinestring>.*?)\\} (?P<whiterating>\\d+) (?P<blackrating>\\d+) (?P<gameid>\\d+) \\{(?P<whitetitles>[^}]*)\\} \\{(?P<blacktitles>[^}]*)\\} (?P<irregularlegality>\\d) (?P<irregularsemantics>\\d) (?P<usesplunkers>\\d) (?P<fancytimecontrol>[^ ]+) (?P<promotetoking>\\d)\\)"
                           ,  QRegularExpression::CaseInsensitiveOption);
-
 
     QRegularExpressionMatchIterator i  = re.globalMatch(unparsedDg);
     while (i.hasNext()) {

@@ -9,6 +9,27 @@ class QTcpSocket;
 
 #include "chessclient.h"
 
+struct IccDgMatch
+{
+    QString challname;
+    int challrating;
+    int challratingtype;
+    QString challtitles;
+    QString receiname;
+    int receirating;
+    int receiratingtype;
+    QString receititles;
+    int wildnumber;
+    QString ratingtype;
+    bool israted;
+    bool isadjourned;
+    int challinitialmin;
+    int challincsec;
+    int receiverinitialmin;
+    int receiverincsec;
+    int challcolorrequest;
+    QString assess;
+};
 
 /*
 DG_WHO_AM_Irelipse {}
@@ -111,8 +132,14 @@ public:
     void onLoggedIn(const QString& myHandle, const QString& myTitles);
     void onLoginFailed();
     void onTell(const QString& fromHandle, const QString& fromTitles, int type, const QString& text);
+    void onMatch(const IccDgMatch& dgMatch);
     void onMyGameStarted(const IccDgGameStarted& dgMyGameStarted);
     void onGameStarted(const IccDgGameStarted& dgGameStarted);
+    //this tells client whether i am white or black or examining, observing or x game over etc
+    void onMyRelationToGame(int game_number, const QString& symbol);
+    //whenever moves get sent (from myself or opponent), this signal should update the board officially
+    //and the move confirmed
+    void onSendMoves(int game_number, const QString& algebraic,const QString& smith, int timetaken, int clock, bool is_variation);
 public:
     void SetUsername(const QString& username);
     void SetPassword(const QString& password);
