@@ -61,6 +61,22 @@ void BoardView::setFlags(int flags)
     m_flags = flags;
 }
 
+
+Game& BoardView::game()
+{
+   return m_game;
+}
+
+const Game& BoardView::game() const
+{
+   return m_game;
+}
+
+void BoardView::setGame(const Game &game)
+{
+   m_game = game;
+}
+
 void BoardView::setBoard(const Board& value,int from, int to, bool atLineEnd)
 {
     m_clickUsed = true;

@@ -76,7 +76,8 @@ MainWindow::MainWindow() : QMainWindow(),
     m_autoPlayTimer(0),
     m_bGameChange(false),
     m_currentFrom(InvalidSquare),
-    m_currentTo(InvalidSquare)
+    m_currentTo(InvalidSquare),
+    m_curGame(NULL)
 {
 	setObjectName("MainWindow");
 
@@ -200,6 +201,7 @@ MainWindow::MainWindow() : QMainWindow(),
 
 
     m_chessClient = new IccClient(this);
+    m_chessClient->setInterface("onethfour chess client pre-alpha 0.0.0.0.0.0.0.1");
 
     connect(m_chessClient, SIGNAL(onError(QString)), this, SLOT(slotChessServerSocketError(QAbstractSocket::SocketError)));
     connect(m_chessClient, SIGNAL(onData(QString)), this, SLOT(slotReceiveServerRawData(QString)));
@@ -546,18 +548,19 @@ void MainWindow::closeEvent(QCloseEvent* e)
 
 void MainWindow::keyPressEvent(QKeyEvent *e)
 {
+    Game& g = *m_curGame;
     if ((e->key() == Qt::Key_Escape) || (e->key() == Qt::Key_Backspace))
     {
 		m_nagText.clear();
         return;
     }
 
-    if (game().atGameStart())
+    if (g.atGameStart())
         return;
 
     if (e->key() == Qt::Key_Delete)
     {
-        game().clearNags();
+        g.clearNags();
         slotGameChanged();
         return;
     }
@@ -575,7 +578,7 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
     if (matches == 0)
         m_nagText.clear();
     else if (matches == 1 || enterPressed) {
-        game().addNag(NagSet::fromString(m_nagText));
+        g.addNag(NagSet::fromString(m_nagText));
         slotGameChanged();
     }
 }
@@ -632,12 +635,14 @@ DatabaseInfo* MainWindow::getDatabaseInfoByPath(QString path)
 
 Game& MainWindow::game()
 {
-	return databaseInfo()->currentGame();
+    return *m_curGame;
+    //return databaseInfo()->currentGame();
 }
 
 const Game& MainWindow::game() const
 {
-    return databaseInfo()->currentGame();
+    return *m_curGame;
+    //return databaseInfo()->currentGame();
 }
 
 int MainWindow::gameIndex() const

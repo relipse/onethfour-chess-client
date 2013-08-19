@@ -139,7 +139,7 @@ public:
     void onMyRelationToGame(int game_number, const QString& symbol);
     //whenever moves get sent (from myself or opponent), this signal should update the board officially
     //and the move confirmed
-    void onSendMoves(int game_number, const QString& algebraic,const QString& smith, int timetaken, int clock, bool is_variation);
+    void onSendMoves(long game_number, const QString& algebraic,const QString& smith, int timetaken, int clock, bool is_variation);
 public:
     void SetUsername(const QString& username);
     void SetPassword(const QString& password);
@@ -149,6 +149,9 @@ public:
 
     void parseDatagram(int dg, const QString& unparsedDg);
     bool parseDgGameStarted(const QString &unparsedDg, IccDgGameStarted &dgGameStarted);
+    const QString& getInterface() const;
+    void setInterface(const QString &iface);
+
 protected:
     QString m_level2settings;
     QString m_username;
@@ -158,6 +161,7 @@ protected:
     QString m_loggedInTitles;
 
     QString m_lastTellFrom;
+    QString m_interface;
 };
 
 #endif // ICCCLIENT_H

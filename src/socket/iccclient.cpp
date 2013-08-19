@@ -19,6 +19,8 @@ IccClient::IccClient(QObject *parent, const QString& username, const QString& pa
 
 void IccClient::on_connected()
 {
+
+    send(tr("set interface ")+m_interface);
     //send level2settings
     send(tr("level2settings=")+m_level2settings+tr("\n"));
     if (!m_username.isEmpty()){
@@ -73,10 +75,10 @@ void IccClient::on_receiveText(const QString &data)
         qDebug() << match;
         if (!match.captured(1).isEmpty())
         {
-           parseDatagram(match.captured(1).toInt(), match.captured(0));
-           emit onDatagram(match.captured(1).toInt(), match.captured(0));
+            parseDatagram(match.captured(1).toInt(), match.captured(0));
+            emit onDatagram(match.captured(1).toInt(), match.captured(0));
         }else{ //matched 3
-           emit onNonDatagram(match.captured(3));
+            emit onNonDatagram(match.captured(3));
         }
     }
 }
@@ -134,8 +136,20 @@ void IccClient::parseDatagram(int dg, const QString &unparsedDg)
         }else{
             qDebug() << "error parsing";
         }
+    }else if (dg == DG_MY_RELATION_TO_GAME){
+        //DG_MY_RELATION_TO_GAME(43 959 PW)
+        QRegularExpression re("\\((?P<dg>\\d+) (?P<gamenum>\\d+) (?P<symbol>\\w+)\\)");
+        QRegularExpressionMatch match = re.match(unparsedDg);
+        emit onMyRelationToGame(match.captured("gamenum").toInt(), match.captured("symbol"));
+    }else if (dg == DG_SEND_MOVES){
+        //DG_SEND_MOVES(24 959 e4 e2e4 23 37)
+        // (gamenumber algebraic-move smith-move time clock is-variation)
+        QRegularExpression re("\\((?P<dg>\\d+) (?P<gamenum>\\d+)( (?P<algebraic>[^ ]+))?( (?P<smith>[^ ]+))?( (?P<timetook>\\d+)?)( (?P<clock>\\d+)?)( (?P<isvariation>\\d)?)\\)");
+        QRegularExpressionMatch match = re.match(unparsedDg);
+        emit onSendMoves(match.captured("gamenum").toLong(), match.captured("algebraic"), match.captured("smith"), match.captured("timetook").toInt(), match.captured("clock").toInt(), match.captured("isvariation").toInt());
+
     }else if (dg == DG_MATCH){
-        QString regex = "\\((\\d+) (?P<challname>[^ ]+) (?P<challrating>\\d+) (?P<challratingtype>\\d) \\{(?P<challtitles>)\\} (?P<receiname>[^ ]+) (?P<receirating>\\d+) (?P<receiratingtype>\\d) \{(?P<receititles>)\} (?P<wildnumber>\\d+) (?P<ratingtype>[^ ]+) (?P<israted>\\d) (?P<isadjourned>\\d) (?P<challinitialmin>\\d+) (?P<challincsec>\\d+) (?P<receiverinitialmin>\\d+) (?P<receiverincsec>\\d+) (?P<challcolorrequest>\\-?\\d+)( (?P<assess>[^ ]+ [^ ]+ [^ ]+))? (?P<fancytimecontrol>[^ ]+)\\)";
+        QString regex = "\\((\\d+) (?P<challname>[^ ]+) (?P<challrating>\\d+) (?P<challratingtype>\\d) \\{(?P<challtitles>)\\} (?P<receiname>[^ ]+) (?P<receirating>\\d+) (?P<receiratingtype>\\d) \\{(?P<receititles>)\\} (?P<wildnumber>\\d+) (?P<ratingtype>[^ ]+) (?P<israted>\\d) (?P<isadjourned>\\d) (?P<challinitialmin>\\d+) (?P<challincsec>\\d+) (?P<receiverinitialmin>\\d+) (?P<receiverincsec>\\d+) (?P<challcolorrequest>\\-?\\d+)( (?P<assess>[^ ]+ [^ ]+ [^ ]+))? (?P<fancytimecontrol>[^ ]+)\\)";
         QRegularExpression re(regex);
         QRegularExpressionMatch match = re.match(unparsedDg);
         qDebug() << "Is a valid match? " << match.isValid()
@@ -277,6 +291,19 @@ bool IccClient::parseDgGameStarted(const QString& unparsedDg, IccDgGameStarted &
         return true;
     }
     return false;
+}
+
+const QString &IccClient::getInterface() const
+{
+    return m_interface;
+}
+
+void IccClient::setInterface(const QString &iface)
+{
+    m_interface = iface;
+    if (this->connected()){
+        send(tr("set interface ")+m_interface);
+    }
 }
 
 void IccClient::SetUsername(const QString &username)

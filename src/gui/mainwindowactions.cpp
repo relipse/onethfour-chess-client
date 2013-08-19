@@ -477,7 +477,8 @@ void MainWindow::slotHelpBug()
 	QDesktopServices::openUrl(QUrl("http://sourceforge.net/tracker/?group_id=163833&atid=829300"));
 }
 
-
+//most likly when moving it will be from m_curBoard
+//every time a board gets focused, we set the curBoard
 void MainWindow::slotBoardMove(Square from, Square to, int button)
 {
     const Board& board = game().board();
@@ -599,14 +600,48 @@ void MainWindow::slotBoardClick(Square s, int button, QPoint pos, Square from)
     }
 }
 
+void MainWindow::slotServerGameMoveChanged(long game_number)
+{
+        BoardView* bv = GetBoardByServerGameNumber(game_number);
+        const Game& g = m_serverGames[game_number];
+        MoveId m = g.currentMove();
+
+        // Set board first
+        QString fen = bv->board().toFen();
+        m_boardView->setBoard(g.board(), m_currentFrom, m_currentTo, g.atLineEnd());
+        m_currentFrom = InvalidSquare;
+        m_currentTo = InvalidSquare;
+
+        emit displayTime(g.timeAnnotation(), g.board().toMove());
+
+        // Highlight current move
+        m_gameView->showMove(m);
+
+        slotSearchTree();
+        emit boardChange(g.board());
+
+        // Clear  entries
+        m_nagText.clear();
+
+        emit signalMoveHasNextMove(!g.atLineEnd());
+        emit signalMoveHasPreviousMove(!g.atGameStart());
+        emit signalMoveHasVariation(g.variationCount() > 0);
+        emit signalMoveHasParent(!g.isMainline());
+        emit signalVariationHasSibling(g.variationHasSiblings(m));
+        emit signalGameIsEmpty(false);
+}
+
+
+//TODO: determine which board this affects
 void MainWindow::slotMoveChanged()
 {
-    const Game& g = game();
+    //when the move changed, it affected m_curGame
+    const Game& g = *m_curGame;
     MoveId m = g.currentMove();
 
 	// Set board first
     QString fen = m_boardView->board().toFen();
-    m_boardView->setBoard(g.board(), m_currentFrom, m_currentTo, game().atLineEnd());
+    m_boardView->setBoard(g.board(), m_currentFrom, m_currentTo, g.atLineEnd());
     m_currentFrom = InvalidSquare;
     m_currentTo = InvalidSquare;
 
@@ -621,11 +656,11 @@ void MainWindow::slotMoveChanged()
 	// Clear  entries
 	m_nagText.clear();
 
-    emit signalMoveHasNextMove(!game().atLineEnd());
-    emit signalMoveHasPreviousMove(!game().atGameStart());
-    emit signalMoveHasVariation(game().variationCount() > 0);
-    emit signalMoveHasParent(!game().isMainline());
-    emit signalVariationHasSibling(game().variationHasSiblings(m));
+    emit signalMoveHasNextMove(!g.atLineEnd());
+    emit signalMoveHasPreviousMove(!g.atGameStart());
+    emit signalMoveHasVariation(g.variationCount() > 0);
+    emit signalMoveHasParent(!g.isMainline());
+    emit signalVariationHasSibling(g.variationHasSiblings(m));
     emit signalGameIsEmpty(false);
 }
 
@@ -644,9 +679,10 @@ void MainWindow::slotBoardMoveWheel(int wheel)
 
 void MainWindow::slotGameVarEnter()
 {
-    if (game().variationCount(game().currentMove()))
+    Game& g = *m_curGame;
+    if (g.variationCount(g.currentMove()))
     {
-		game().moveToId(game().variations().first());
+        g.moveToId(g.variations().first());
         if (m_training->isChecked())
         {
             slotGameChanged();
@@ -664,18 +700,19 @@ void MainWindow::slotGameVarEnter()
 
 void MainWindow::slotGameVarUp()
 {
-    if (!game().isMainline())
+    Game& g = *m_curGame;
+    if (!g.isMainline())
     {
-        while (!game().atLineStart())
+        while (!g.atLineStart())
         {
-            game().backward();
+            g.backward();
         }
-        MoveId currentVar = game().currentMove();
-        game().backward();
-        int n = game().variations().indexOf(currentVar) - 1;
+        MoveId currentVar = g.currentMove();
+        g.backward();
+        int n = g.variations().indexOf(currentVar) - 1;
         if (n>=0)
         {
-           game().moveToId(game().variations().at(n));
+           g.moveToId(g.variations().at(n));
         }
     }
     slotMoveChanged();
@@ -683,25 +720,26 @@ void MainWindow::slotGameVarUp()
 
 void MainWindow::slotGameVarDown()
 {
-    if (!game().isMainline())
+    Game& g = *m_curGame;
+    if (!g.isMainline())
     {
-        while (!game().atLineStart())
+        while (!g.atLineStart())
         {
-            game().backward();
+            g.backward();
         }
-        MoveId currentVar = game().currentMove();
-        game().backward();
-        int n = game().variations().indexOf(currentVar) + 1;
-        if (n < game().variations().count())
+        MoveId currentVar = g.currentMove();
+        g.backward();
+        int n = g.variations().indexOf(currentVar) + 1;
+        if (n < g.variations().count())
         {
-           game().moveToId(game().variations().at(n));
+           g.moveToId(g.variations().at(n));
         }
         else
         {
            if (!m_training->isChecked())
            {
               // Do not show next move in training mode
-              game().forward();
+              g.forward();
            }
         }
     }
@@ -710,13 +748,14 @@ void MainWindow::slotGameVarDown()
 
 void MainWindow::slotGameVarExit()
 {
-    if (!game().isMainline())
+    Game& g = *m_curGame;
+    if (!g.isMainline())
     {
-		while (!game().atLineStart())
+        while (!g.atLineStart())
         {
-			game().backward();
+            g.backward();
         }
-        game().backward();
+        g.backward();
         if (m_training->isChecked())
         {
             slotGameChanged();
@@ -1613,7 +1652,7 @@ void MainWindow::slotRedArrowHere()
 }
 
 //this is helpful so we know where the move took place
-BoardView* MainWindow::GetBoardByServerGameNumber(int game_number){
+BoardView* MainWindow::GetBoardByServerGameNumber(long game_number){
     for (int i = 0; i < m_boardViews.size(); ++i){
         if (m_boardViews[i]->gameNumber() == game_number){
             return m_boardViews[i];
@@ -1627,11 +1666,17 @@ BoardView* MainWindow::CreateBoardViewByServerGameStarted(const IccDgGameStarted
     BoardView* boardView = new BoardView(m_tabWidget);
     boardView->setMinimumSize(200, 200);
     boardView->configure();
-    boardView->setBoard(standardStartBoard);
-    boardView->setDbIndex(m_currentDatabase);
+    Board nb;
+    nb.setStandardPosition();
+    boardView->setBoard(nb);
+    m_curGame = &boardView->game();
     boardView->setGameNumber(dgMyGameStarted.gamenumber);
     m_boardViews.push_back(boardView);
-    m_tabWidget->addTab(boardView,QString("%1 vs %2 #%3")
+
+    //update the board to show correct pieces
+    slotServerGameMoveChanged(dgMyGameStarted.gamenumber);
+
+    m_tabWidget->addTab(boardView, QString("%1 vs %2 #%3")
             .arg(dgMyGameStarted.whitename)
             .arg(dgMyGameStarted.blackname)
             .arg(dgMyGameStarted.gamenumber)
@@ -1646,11 +1691,15 @@ BoardView* MainWindow::CreateBoardView()
     BoardView* boardView = new BoardView(m_tabWidget);
     boardView->setMinimumSize(200, 200);
     boardView->configure();
+
+
     boardView->setBoard(standardStartBoard);
+    m_curGame = &boardView->game();
+
     boardView->setDbIndex(m_currentDatabase);
 
     m_boardViews.push_back(boardView);
-    m_tabWidget->addTab(boardView,QString("%1").arg(m_boardViews.count()));
+    m_tabWidget->addTab(boardView,QString("Offline Bd %1").arg(m_boardViews.count()));
     m_tabWidget->setCurrentIndex(m_boardViews.count()-1);
 
     return boardView;
@@ -1675,6 +1724,7 @@ void MainWindow::activateBoardView(int n)
     BoardView* boardView = m_boardViews.at(n);
 
     m_currentDatabase = boardView->dbIndex();
+    m_curGame = &boardView->game();
 
     connect(this, SIGNAL(reconfigure()), boardView, SLOT(configure()));
     connect(boardView, SIGNAL(moveMade(Square, Square, int)), SLOT(slotBoardMove(Square, Square, int)));
@@ -1688,12 +1738,7 @@ void MainWindow::slotActivateBoardView(int n)
 {
     activateBoardView(n);
     slotGameChanged();
-    m_databaseList->setFileCurrent(databaseInfo()->filePath());
-    database()->index()->calculateCache();
-    setWindowTitle(tr("%1 - ChessX").arg(databaseName()));
-    m_gameList->setFilter(databaseInfo()->filter());
-    slotFilterChanged();
-    emit databaseChanged(databaseInfo());
+    setWindowTitle(tr("%1 - ChessX").arg(n));
 }
 
 void MainWindow::slotCloseBoardView(int n)

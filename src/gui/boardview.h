@@ -21,6 +21,7 @@
 #include "board.h"
 #include "boardtheme.h"
 #include "guess.h"
+#include "game.h"
 
 #include <QWidget>
 
@@ -67,6 +68,10 @@ public:
 
     int gameNumber() const;
     void setGameNumber(int gameNumber);
+
+    Game& game();
+    const Game& game() const;
+    void setGame(const Game &game);
 
 public slots:
 
@@ -178,6 +183,7 @@ private:
     bool m_showMoveIndicator;
     int m_DbIndex;
     int m_gameNumber;
+    Game m_game;
 };
 
 class BoardViewMimeData : public QMimeData

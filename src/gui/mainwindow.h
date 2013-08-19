@@ -72,7 +72,8 @@ public:
 
 
     BoardView* CreateBoardViewByServerGameStarted(const IccDgGameStarted &dgMyGameStarted);
-    BoardView *GetBoardByServerGameNumber(int game_number);
+    BoardView *GetBoardByServerGameNumber(long game_number);
+    void slotServerGameMoveChanged(long game_number);
 protected:
 	/** QObjects Eventfilter for QApplication events */
 	bool eventFilter(QObject *obj, QEvent *event);
@@ -333,6 +334,8 @@ public slots:
 
     void slotMyGameStarted(const IccDgGameStarted &dgMyGameStarted);
     void slotMyRelationToGame(int game_number, const QString& symbol);
+    void slotSendMoves(long game_number, const QString& algebraic,const QString& smith, int timetaken, int clock, bool is_variation);
+
 protected slots:
     /** Receiver for a failed loading of a database */
     void loadError(QUrl url);
@@ -504,6 +507,8 @@ private:
     QNetworkAccessManager* m_manager;
     IccClient* m_chessClient;
     DlgConnectToChessServer* dlgConnect;
+    QMap<long, Game> m_serverGames;
+    Game* m_curGame;
 };
 
 
