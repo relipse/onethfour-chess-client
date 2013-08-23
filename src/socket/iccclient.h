@@ -140,6 +140,9 @@ public:
     //whenever moves get sent (from myself or opponent), this signal should update the board officially
     //and the move confirmed
     void onSendMoves(long game_number, const QString& algebraic,const QString& smith, int timetaken, int clock, bool is_variation);
+    void onMoveList(long game_number, const QString& move_list);
+    void onIllegalMove(long game_number, const QString& movestring, int reason);
+    void onTakebackMove(long game_number, long takeback_ply);
 public:
     void SetUsername(const QString& username);
     void SetPassword(const QString& password);

@@ -117,6 +117,7 @@ public:
         return m_arrowAnnotation;
     }
 
+    bool from64Char(const QString &qcharboard);
 private:
 	quint64 m_hashValue;
 

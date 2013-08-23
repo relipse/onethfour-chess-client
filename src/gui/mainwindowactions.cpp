@@ -603,7 +603,7 @@ void MainWindow::slotBoardClick(Square s, int button, QPoint pos, Square from)
 void MainWindow::slotServerGameMoveChanged(long game_number)
 {
         BoardView* bv = GetBoardByServerGameNumber(game_number);
-        const Game& g = m_serverGames[game_number];
+        const Game& g = bv->game();
         MoveId m = g.currentMove();
 
         // Set board first
@@ -1710,8 +1710,19 @@ void MainWindow::slotCreateBoardView()
     CreateBoardView();
 }
 
+int MainWindow::GetBoardIndex(const BoardView* bv){
+    for (int i = 0; i < m_boardViews.size(); ++i){
+        if (bv == m_boardViews.at(i)){
+            return i;
+        }
+    }
+    return -1;
+}
+
 void MainWindow::activateBoardView(int n)
 {
+    if (n < 0){ return; }
+
     if (m_tabWidget->currentIndex() >= 0)
     {
         BoardView* lastView = m_boardViews.at(m_tabWidget->currentIndex());
@@ -1741,6 +1752,7 @@ void MainWindow::slotActivateBoardView(int n)
     setWindowTitle(tr("%1 - ChessX").arg(n));
 }
 
+//TODO: do we want to resign this game?
 void MainWindow::slotCloseBoardView(int n)
 {
     if (n<0)
@@ -1752,10 +1764,8 @@ void MainWindow::slotCloseBoardView(int n)
         m_boardViews.removeAt(n);
         m_tabWidget->removeTab(n);
     }
-    for (int i=0; i<m_boardViews.count(); ++i)
-    {
-        m_tabWidget->setTabText(i, QString("%1").arg(i+1));
-    }
+
+    //do not rename tabs when closing one
 }
 
 void MainWindow::UpdateGameTitle()

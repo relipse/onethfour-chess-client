@@ -542,6 +542,74 @@ public:
     }
 };
 
+//a charboard is a 64 length board that looks something like this:
+//-----B----p------p---k-pq---N---r-----P-------P--P----K---Q-----
+//dashes: empty space
+bool BitBoard::from64Char(const QString& qcharboard)
+{
+    if (qcharboard.length() != 64){
+        return false;
+    }
+    SaneString charboard(qcharboard);
+    char c = charboard[0];
+    // Piece position
+    int i = 0;
+
+    //square positions are interesting
+    //-----B-- is actually turning out like
+
+    //--B-----
+
+    //which means starting with square s = 63 is starting from right to left
+
+
+    //fen decrements several empty squares at a time,
+    //but this 64 character board always has 64 characters
+    Square s = 56;
+    while (c && s >= 0) {
+        switch (c) {
+        //all these can represent empty squares
+        case '-':
+        case ' ':
+        case '_':
+            //remove all pieces on this square
+            removeAt(s);
+            break;
+        case 'p': setAt(s, BlackPawn);    break;
+        case 'n': setAt(s, BlackKnight);  break;
+        case 'b': setAt(s, BlackBishop);  break;
+        case 'r': setAt(s, BlackRook);    break;
+        case 'q': setAt(s, BlackQueen);   break;
+        case 'k': setAt(s, BlackKing);    break;
+
+        case 'P': setAt(s, WhitePawn);    break;
+        case 'N': setAt(s, WhiteKnight);  break;
+        case 'B': setAt(s, WhiteBishop);  break;
+        case 'R': setAt(s, WhiteRook);    break;
+        case 'Q': setAt(s, WhiteQueen);   break;
+        case 'K': setAt(s, WhiteKing);    break;
+        default: //char was not understood as a piece,
+            //that makes it an invalid position, return false
+            //either that or just convert unknown chars to a empty square
+            return false;
+        }
+        //we decrement square backwards because we start with
+        //a8 as upper left and 0th square element
+
+        if ((s+1) % 8 == 0){
+            //we are on our last square of that row ([a-h]8)
+            //subtract 8 to get to previous row
+            s -= 8;
+            //now go all the way to the left by subtracting 7
+            s -= 7;
+        }else{ //normal increment [1-8]
+           s++;
+        }
+        c = charboard[++i];
+    }
+    return true;
+}
+
 bool BitBoard::fromGoodFen(const QString& qfen)
 {
     SaneString fen(qfen);

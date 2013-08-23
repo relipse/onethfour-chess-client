@@ -192,4 +192,21 @@ namespace InternetChessClub
             default: return "";
         }
     }
+
+    const char *GetIllegalMoveReason(int reason)
+    {
+        switch(reason){
+            case 1: return "Bad or ambiguous notation";
+            case 2: return "Illegal (covers most of rules of chess)";
+            case 3: return "King in check (don't ask why this is singled out)";
+            case 4: return "Not your move";
+            case 5: return "Bughouse and don't have the piece you're trying to drop";
+            case 6: return "Bughouse and drop-square isn't empty";
+            case 7:  return "Bughouse and pawn drop attempted on first or eighth rank";
+            case 8: return "Special restriction in some future wild game type";
+            case 9: return "Wait a few seconds before entering moves in examine mode";
+            case 10: return "You lost on time before making that move";
+            default: return "";
+        }
+    }
 }

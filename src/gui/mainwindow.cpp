@@ -79,7 +79,8 @@ MainWindow::MainWindow() : QMainWindow(),
     m_currentTo(InvalidSquare),
     m_curGame(NULL)
 {
-	setObjectName("MainWindow");
+    m_curGame = &m_game;
+    setObjectName("MainWindow");
 
 
 
@@ -201,19 +202,24 @@ MainWindow::MainWindow() : QMainWindow(),
 
 
     m_chessClient = new IccClient(this);
-    m_chessClient->setInterface("onethfour chess client pre-alpha 0.0.0.0.0.0.0.1");
+    //TODO: Temporarily disable setting the interface so we can see an ascii board!
+    //m_chessClient->setInterface("onethfour chess client pre-alpha 0.0.0.0.0.0.0.1");
 
-    connect(m_chessClient, SIGNAL(onError(QString)), this, SLOT(slotChessServerSocketError(QAbstractSocket::SocketError)));
-    connect(m_chessClient, SIGNAL(onData(QString)), this, SLOT(slotReceiveServerRawData(QString)));
-    connect(m_chessClient, SIGNAL(onNonDatagram(int,QString)), this, SLOT(slotReceiveServerNonDatagram(int, QString)));
+    connect(m_chessClient, SIGNAL(onError(QAbstractSocket::SocketError)), this, SLOT(slotChessServerSocketError(QAbstractSocket::SocketError)));
+    //connect(m_chessClient, SIGNAL(onData(QString)), this, SLOT(slotReceiveServerRawData(QString)));
+    connect(m_chessClient, SIGNAL(onNonDatagram(QString)), this, SLOT(slotReceiveServerNonDatagram(QString)));
     connect(m_chessClient, SIGNAL(onDatagram(int,QString)), this, SLOT(slotReceiveServerData(int, QString)));
     connect(m_chessClient, SIGNAL(onTell(QString, QString, int, QString)), this, SLOT(slotOnTell(QString, QString, int, QString)));
 
     //onmatch
     connect(m_chessClient, SIGNAL(onMyGameStarted(IccDgGameStarted)), this, SLOT(slotMyGameStarted(IccDgGameStarted)));
-    connect(m_chessClient, SIGNAL(onMyRelationToGame(int,QString&)), this, SLOT(slotMyRelationToGame(int, QString&)));
+    connect(m_chessClient, SIGNAL(onMyRelationToGame(int,QString)), this, SLOT(slotMyRelationToGame(int, QString)));
     //void onMyRelationToGame(int game_number, QString& symbol);
-    connect(m_chessClient, SIGNAL(onSendMoves(int,QString,QString,int,int,bool)), this, SLOT(slotSendMoves));
+    connect(m_chessClient, SIGNAL(onSendMoves(long,QString,QString,int,int,bool)), this, SLOT(slotSendMoves(long, QString, QString, int, int, bool)));
+    connect(m_chessClient, SIGNAL(onIllegalMove(long,QString, int)), this, SLOT(slotIllegalMove(long, QString, int)));
+    connect(m_chessClient, SIGNAL(onTakebackMove(long,long)), this, SLOT(slotTakebackMove(long, long)));
+    connect(m_chessClient, SIGNAL(onMoveList(long,QString)), this, SLOT(slotMoveList(long, QString)));
+
     dlgConnect = new DlgConnectToChessServer(this);
     connect(dlgConnect->ui->btnConnect, SIGNAL(clicked()), this, SLOT(slotConnectToChessServer()));
     connect(dlgConnect->ui->btnCancel, SIGNAL(clicked()), this, SLOT(slotCancelConnect()));
@@ -430,13 +436,11 @@ void MainWindow::slotMyGameStarted(const IccDgGameStarted& dgMyGameStarted){
         //TODO: disable all computers and engines, unless player has (C)omputer tag
         //TODO: play ding sound
     }
-
-    if (m_serverGames.contains(dgMyGameStarted.gamenumber)){
-        qDebug() << "Critical error game already exists for some odd reason with game started";
+    BoardView* bv = GetBoardByServerGameNumber(dgMyGameStarted.gamenumber);
+    if (bv){
+        //TODO: game already exists? what do to?
         return;
     }
-    //add a Game and a BoardView
-    m_serverGames.insert(dgMyGameStarted.gamenumber, Game());
     CreateBoardViewByServerGameStarted(dgMyGameStarted);
 }
 /*
@@ -470,22 +474,88 @@ void MainWindow::slotMyRelationToGame(int game_number, const QString &symbol)
 
 void MainWindow::slotSendMoves(long game_number, const QString &algebraic, const QString &smith, int timetaken, int clock, bool is_variation)
 {
+    qDebug() << "slotSendMoves " << algebraic << smith << game_number;
     BoardView* board = GetBoardByServerGameNumber(game_number);
-    if (m_serverGames.contains(game_number)){
-        Game& g =  m_serverGames[game_number];
-        Move m(g.board().parseMove(algebraic));
-        //who cares if the move is legal, just do it
-        if (g.atLineEnd())
-        {
-            g.addMove(m);
-        }else{
-            //if we are in the middle of a variation
-            g.addVariation(m);
-            g.forward();
-        }
-        slotServerGameMoveChanged(game_number);
+    activateBoardView(GetBoardIndex(board));
+    Game& g =  board->game();
+    Move m(g.board().parseMove(smith));
+    //who cares if the move is legal, just do it
+    if (g.atLineEnd())
+    {
+        g.addMove(m);
+    }else{
+        //if we are in the middle of a variation
+        g.addVariation(m);
+        g.forward();
     }
+    slotServerGameMoveChanged(game_number);
+}
 
+void MainWindow::slotMoveList(long game_number, const QString &moveList)
+{
+    qDebug() << "Game: " << game_number << " move list: " << moveList;
+    BoardView* bv = GetBoardByServerGameNumber(game_number);
+    if (!bv){ return; }
+
+    if (moveList.length() == 64){
+        Board b;
+        if (b.from64Char(moveList)){
+            bv->game().setStartingBoard(b);
+            bv->setBoard(b);
+            bv->update();
+            qDebug() << "Valid char board";
+        }else{
+            qDebug() << "Invalid 64 Char board";
+        }
+    }else{
+        qDebug() << "move list not a char position";
+    }
+}
+
+//when I make an illegal move, we need to take it back by 1 ply
+void MainWindow::slotIllegalMove(long game_number, const QString &movestring, int reason)
+{
+    slotStatusMessage(tr("Illegal Move ") + movestring +
+                      tr(" (") + tr(ICC::GetIllegalMoveReason(reason)) + ")" );
+
+    //an illegal move means we tried to make an illegal move,
+    //we need to take back the move
+    BoardView* bv = GetBoardByServerGameNumber(game_number);
+    if (!bv){ return; }
+    //activate that board
+    activateBoardView(GetBoardIndex(bv));
+
+   // bv->game().backward(1);
+    if (bv->game().moveByPly(-1))
+    {
+        slotMoveChanged();
+        bv->setFocus();
+    }
+    bv->update();
+}
+
+void MainWindow::slotTakebackMove(long game_number, long takeback_ply)
+{
+    slotStatusMessage(tr("Taking back %1 move in game #%2")
+                      .arg(takeback_ply)
+                      .arg(game_number));
+
+    //we need to take back the move
+    BoardView* bv = GetBoardByServerGameNumber(game_number);
+    if (!bv){ slotStatusMessage("Error no board found"); return; }
+    //activate that board
+    activateBoardView(GetBoardIndex(bv));
+
+    //qDebug() << "Backward" << bv->game().backward(takeback_ply);
+    if (bv->game().moveByPly(-takeback_ply))
+    {
+        qDebug() << "moveByPly succeeded";
+        slotMoveChanged();
+        bv->setFocus();
+    }else{
+        qDebug() << "movebyPly failed";
+    }
+    bv->update();
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)

@@ -74,6 +74,7 @@ public:
     BoardView* CreateBoardViewByServerGameStarted(const IccDgGameStarted &dgMyGameStarted);
     BoardView *GetBoardByServerGameNumber(long game_number);
     void slotServerGameMoveChanged(long game_number);
+    int GetBoardIndex(const BoardView *bv);
 protected:
 	/** QObjects Eventfilter for QApplication events */
 	bool eventFilter(QObject *obj, QEvent *event);
@@ -335,7 +336,9 @@ public slots:
     void slotMyGameStarted(const IccDgGameStarted &dgMyGameStarted);
     void slotMyRelationToGame(int game_number, const QString& symbol);
     void slotSendMoves(long game_number, const QString& algebraic,const QString& smith, int timetaken, int clock, bool is_variation);
-
+    void slotMoveList(long game_number, const QString& moveList);
+    void slotIllegalMove(long game_number, const QString& movestring, int reason);
+    void slotTakebackMove(long game_number, long takeback_ply);
 protected slots:
     /** Receiver for a failed loading of a database */
     void loadError(QUrl url);
@@ -507,8 +510,8 @@ private:
     QNetworkAccessManager* m_manager;
     IccClient* m_chessClient;
     DlgConnectToChessServer* dlgConnect;
-    QMap<long, Game> m_serverGames;
     Game* m_curGame;
+    Game m_game; //this serves as a default game so we don't seg fault
 };
 
 

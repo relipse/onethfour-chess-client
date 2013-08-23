@@ -20,7 +20,7 @@ IccClient::IccClient(QObject *parent, const QString& username, const QString& pa
 void IccClient::on_connected()
 {
 
-    send(tr("set interface ")+m_interface);
+
     //send level2settings
     send(tr("level2settings=")+m_level2settings+tr("\n"));
     if (!m_username.isEmpty()){
@@ -31,6 +31,7 @@ void IccClient::on_connected()
     }else{
         //no username provided, what now?
     }
+
 }
 
 void IccClient::on_error(QAbstractSocket::SocketError error)
@@ -60,16 +61,6 @@ void IccClient::on_receiveText(const QString &data)
     QRegularExpression rx(regex);
     QRegularExpressionMatchIterator i  = rx.globalMatch(data);
 
-    /**
-    int pos_start_dg = data.indexOf("(");
-    if (pos_start_dg == -1){
-        //no datagrams, send all to unparsed
-        emit onNonDatagram(data);
-        return;
-    }else if (pos_start_dg > 0){
-        //there is some text prior to the dg, that needs to be a nonDatagram
-        data.at()
-    }**/
     while (i.hasNext()) {
         QRegularExpressionMatch match = i.next();
         qDebug() << match;
@@ -99,6 +90,9 @@ void IccClient::parseDatagram(int dg, const QString &unparsedDg)
     }*/
 
     if (dg == DG_WHO_AM_I){
+        if (!m_interface.isEmpty()){
+            send(tr("set interface ")+m_interface + "\n");
+        }
         //(0 TexasHoldem {C})
         QRegExp rx("\\((\\d+) (.+) \\{(.*)\\}\\)");
         rx.setMinimal(true);
@@ -144,9 +138,44 @@ void IccClient::parseDatagram(int dg, const QString &unparsedDg)
     }else if (dg == DG_SEND_MOVES){
         //DG_SEND_MOVES(24 959 e4 e2e4 23 37)
         // (gamenumber algebraic-move smith-move time clock is-variation)
-        QRegularExpression re("\\((?P<dg>\\d+) (?P<gamenum>\\d+)( (?P<algebraic>[^ ]+))?( (?P<smith>[^ ]+))?( (?P<timetook>\\d+)?)( (?P<clock>\\d+)?)( (?P<isvariation>\\d)?)\\)");
+        QRegularExpression re("\\((?P<dg>\\d+) (?P<gamenum>\\d+) (?P<algebraic>[^ ]+) (?P<smith>[^ ]+) (?P<timetook>\\d+)? (?P<clock>\\d+)( (?P<isvariation>\\d))?\\)");
         QRegularExpressionMatch match = re.match(unparsedDg);
+        qDebug() << "mached SEND_MOVES? " << match;
         emit onSendMoves(match.captured("gamenum").toLong(), match.captured("algebraic"), match.captured("smith"), match.captured("timetook").toInt(), match.captured("clock").toInt(), match.captured("isvariation").toInt());
+    }else if (dg == DG_TAKEBACK){
+        //DG_TAKEBACK(22 1541 1)
+
+        QRegularExpression re("\\((?P<dg>\\d+) (?P<gamenum>\\d+) (?P<takebackply>\\d+)\\)");
+        QRegularExpressionMatch match = re.match(unparsedDg);
+        qDebug() << "emittting a dgTakeBack" ;
+        emit onTakebackMove(match.captured("gamenum").toLong(), match.captured("takebackply").toLong());
+    }
+
+    else if (dg == DG_ILLEGAL_MOVE){
+        QRegularExpression re("\\((?P<dg>\\d+) (?P<gamenum>\\d+)( (?P<movestring>.*?))? (?P<reason>\\d+)\\)");
+        QRegularExpressionMatch match = re.match(unparsedDg);
+
+        emit onIllegalMove(match.captured("gamenum").toLong(), match.captured("movestring"), match.captured("reason").toInt());
+    }else if (dg == DG_MOVE_LIST){
+//        DG_MY_GAME_STARTED(15 1021 relipse TrainingBot 20 Blitz 0 20 10 20 10 1 {} 1827 1600 1624995327 {} {C} 0 0 0 {} 0)
+//        DG_MY_RELATION_TO_GAME(43 1021 PW)
+//        DG_PLAYERS_IN_MY_GAME(20 1021 relipse PW 1)
+//        DG_FLIP(39 1021 0)
+//        DG_MOVE_LIST(25 1021 -----B----p------p---k-pq---N---r-----P-------P--P----K---Q----- {Qc6+ c1c6 18 1192}{Kxe5 f6e5n 0 1210})
+//        DG_SET_CLOCK(38 1021 1174 1225)
+//        DG_PLAYERS_IN_MY_GAME(20 1021 TrainingBot PB 1)
+
+
+
+        //(25 893 -----B----p------p---k-pq---N---r-----P-------P--P----K---Q----- )
+        QString regex_move_list = "\\((\\d+) (\\d+) (.+?) ?(?<playedmoves>\\{(.*?)\\})*?\\)";
+        QRegularExpression re(regex_move_list);
+        QRegularExpressionMatch match = re.match(unparsedDg);
+
+        //TODO: send played moves so client can resume an adjourned game
+        emit onMoveList(match.captured(2).toLong(), match.captured(3));
+
+        qDebug() << "set up the board if necessary" << match.captured(2);
 
     }else if (dg == DG_MATCH){
         QString regex = "\\((\\d+) (?P<challname>[^ ]+) (?P<challrating>\\d+) (?P<challratingtype>\\d) \\{(?P<challtitles>)\\} (?P<receiname>[^ ]+) (?P<receirating>\\d+) (?P<receiratingtype>\\d) \\{(?P<receititles>)\\} (?P<wildnumber>\\d+) (?P<ratingtype>[^ ]+) (?P<israted>\\d) (?P<isadjourned>\\d) (?P<challinitialmin>\\d+) (?P<challincsec>\\d+) (?P<receiverinitialmin>\\d+) (?P<receiverincsec>\\d+) (?P<challcolorrequest>\\-?\\d+)( (?P<assess>[^ ]+ [^ ]+ [^ ]+))? (?P<fancytimecontrol>[^ ]+)\\)";

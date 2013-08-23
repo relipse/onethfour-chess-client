@@ -167,6 +167,8 @@ namespace InternetChessClub
           DG_MOVE_LAG = 144 };
 
     const char* DatagramToString(int dg);
+
+    const char* GetIllegalMoveReason(int reason);
 }
 //ahh, the glories of acronyms
 namespace ICC = InternetChessClub;
