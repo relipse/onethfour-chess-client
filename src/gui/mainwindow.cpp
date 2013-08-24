@@ -552,10 +552,11 @@ void MainWindow::slotTakebackMove(long game_number, long takeback_ply)
         qDebug() << "moveByPly succeeded";
         slotMoveChanged();
         bv->setFocus();
+        bv->update();
     }else{
         qDebug() << "movebyPly failed";
     }
-    bv->update();
+
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
