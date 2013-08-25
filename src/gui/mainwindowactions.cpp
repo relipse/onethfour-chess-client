@@ -1844,6 +1844,11 @@ void MainWindow::slotSendToServer()
     if (!m_chessClient || !m_consoleWidget){
         return;
     }
+    QString text = m_consoleWidget->getEditSend()->text();
+    if (text == "TA1"){
+        QTimer::singleShot(500, this, SLOT(undoMove()));
+        return;
+    }
     m_chessClient->send(m_consoleWidget->getEditSend()->text()+"\n");
     m_consoleWidget->getEditSend()->clear();
 }
@@ -1851,4 +1856,14 @@ void MainWindow::slotSendToServer()
 void MainWindow::slotCancelConnect()
 {
     dlgConnect->close();
+}
+
+void MainWindow::undoMove()
+{
+    activateBoardView(GetBoardIndex(m_boardView));
+    //qDebug() << "Backward" << bv->game().backward(takeback_ply);
+    if (m_boardView->game().moveByPly(-1))
+    {
+        slotMoveChanged();
+    }
 }

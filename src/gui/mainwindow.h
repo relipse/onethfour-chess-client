@@ -339,6 +339,8 @@ public slots:
     void slotMoveList(long game_number, const QString& moveList);
     void slotIllegalMove(long game_number, const QString& movestring, int reason);
     void slotTakebackMove(long game_number, long takeback_ply);
+
+    void undoMove();
 protected slots:
     /** Receiver for a failed loading of a database */
     void loadError(QUrl url);
@@ -374,6 +376,8 @@ protected slots:
     void slotSendToServer();
 
     void slotCancelConnect();
+
+
 protected:
     void copyGame(int target, int index);
     Database* getDatabaseByPath(QString path);

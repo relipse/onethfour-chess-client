@@ -20,7 +20,9 @@ namespace Guess
 		if (mlist.Size() == 0)
 			return r;
 
-        if (mlist.Size() > 1) {
+        //using an engine while playing is considered cheating, even if it is only for a guess move
+        //therefore we have to disable it by passing 0 in thinktime
+        if (thinkTime > 0 && mlist.Size() > 1) {
 			Engine * engine = new Engine();
             engine->SetSearchTime(thinkTime);
 			engine->SetPosition(&pos);

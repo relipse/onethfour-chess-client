@@ -276,6 +276,14 @@ void BoardView::mousePressEvent(QMouseEvent* event)
 
 bool BoardView::showGuess(Square s)
 {
+    if (m_hoverSquare == InvalidSquare){ return false; }
+
+    //Do not allow showGuess to work when hoving over your own piece
+    Piece p = m_game.board().pieceAt(m_hoverSquare);
+    //temporarily do not allow guessing for white pieces
+    if (isWhite(p)){
+        return false;
+    }
     // Don't want to constantly recalculate guess, so remember which square
     // the mouse is hovering over, and only show new guess when it changes
     if (m_guessMove && s != m_hoverSquare && !(m_flags & SuppressGuessMove))
@@ -284,15 +292,18 @@ bool BoardView::showGuess(Square s)
         removeGuess();
         m_moveListCurrent = 0;
         m_moveList.Clear();
+        bool useComputer = false;
 #ifdef USE_ECO_GUESS
-        if (m_board.ecoMove(s, &m_hifrom, &m_hito)) {
+        if (useComputer && m_board.ecoMove(s, &m_hifrom, &m_hito)) {
             update(squareRect(m_hifrom));
             update(squareRect(m_hito));
         }
         else
 #endif
         {
-            Guess::Result sm = Guess::guessMove(qPrintable(m_board.toFen()), (int) s, m_moveList);
+            int thinkTime = useComputer ? 25 : 0;
+            //here we ensure that thinkTime is 0, thus not allowing a slight form of possible cheating
+            Guess::Result sm = Guess::guessMove(qPrintable(m_board.toFen()), (int) s, m_moveList, thinkTime);
             if (!sm.error)
             {
                 m_hiFrom = sm.from;

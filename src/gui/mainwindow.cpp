@@ -545,18 +545,10 @@ void MainWindow::slotTakebackMove(long game_number, long takeback_ply)
     if (!bv){ slotStatusMessage("Error no board found"); return; }
     //activate that board
     activateBoardView(GetBoardIndex(bv));
-
-    //qDebug() << "Backward" << bv->game().backward(takeback_ply);
-    if (bv->game().moveByPly(-takeback_ply))
-    {
-        qDebug() << "moveByPly succeeded";
-        slotMoveChanged();
-        bv->setFocus();
-        bv->update();
-    }else{
-        qDebug() << "movebyPly failed";
-    }
-
+    m_boardView = bv;
+    undoMove();
+    undoMove();
+    //QTimer::singleShot(1400, this, SLOT(undoMove()));
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
