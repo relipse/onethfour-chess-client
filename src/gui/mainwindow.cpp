@@ -219,6 +219,7 @@ MainWindow::MainWindow() : QMainWindow(),
     connect(m_chessClient, SIGNAL(onIllegalMove(long,QString, int)), this, SLOT(slotIllegalMove(long, QString, int)));
     connect(m_chessClient, SIGNAL(onTakebackMove(long,long)), this, SLOT(slotTakebackMove(long, long)));
     connect(m_chessClient, SIGNAL(onMoveList(long,QString)), this, SLOT(slotMoveList(long, QString)));
+    connect(m_chessClient, SIGNAL(onFlip(long,int)), this, SLOT(slotSrvFlip(long, int)));
 
     dlgConnect = new DlgConnectToChessServer(this);
     connect(dlgConnect->ui->btnConnect, SIGNAL(clicked()), this, SLOT(slotConnectToChessServer()));
@@ -549,6 +550,13 @@ void MainWindow::slotTakebackMove(long game_number, long takeback_ply)
     undoMove();
     undoMove();
     //QTimer::singleShot(1400, this, SLOT(undoMove()));
+}
+
+void MainWindow::slotSrvFlip(long game_number, int flip)
+{
+    BoardView* bv = GetBoardByServerGameNumber(game_number);
+    if (!bv){ return; }
+    bv->setFlipped((flip == 1));
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)

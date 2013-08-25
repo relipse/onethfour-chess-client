@@ -143,6 +143,7 @@ public:
     void onMoveList(long game_number, const QString& move_list);
     void onIllegalMove(long game_number, const QString& movestring, int reason);
     void onTakebackMove(long game_number, long takeback_ply);
+    void onFlip(long game_number, int flip);
 public:
     void SetUsername(const QString& username);
     void SetPassword(const QString& password);

@@ -156,6 +156,12 @@ void IccClient::parseDatagram(int dg, const QString &unparsedDg)
         QRegularExpressionMatch match = re.match(unparsedDg);
 
         emit onIllegalMove(match.captured("gamenum").toLong(), match.captured("movestring"), match.captured("reason").toInt());
+    }else if (dg == DG_PLAYERS_IN_MY_GAME){
+     //do something
+    }else if (dg == DG_FLIP){
+        QRegularExpression re("\\((?P<dg>\\d+) (?P<gamenum>\\d+) (?P<flip>\\d+)\\)");
+        QRegularExpressionMatch match = re.match(unparsedDg);
+        emit onFlip(match.captured("gamenum").toLong(), match.captured("flip").toInt());
     }else if (dg == DG_MOVE_LIST){
 //        DG_MY_GAME_STARTED(15 1021 relipse TrainingBot 20 Blitz 0 20 10 20 10 1 {} 1827 1600 1624995327 {} {C} 0 0 0 {} 0)
 //        DG_MY_RELATION_TO_GAME(43 1021 PW)

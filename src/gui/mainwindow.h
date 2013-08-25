@@ -339,7 +339,7 @@ public slots:
     void slotMoveList(long game_number, const QString& moveList);
     void slotIllegalMove(long game_number, const QString& movestring, int reason);
     void slotTakebackMove(long game_number, long takeback_ply);
-
+    void slotSrvFlip(long game_number, int flip);
     void undoMove();
 protected slots:
     /** Receiver for a failed loading of a database */

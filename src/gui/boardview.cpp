@@ -276,6 +276,8 @@ void BoardView::mousePressEvent(QMouseEvent* event)
 
 bool BoardView::showGuess(Square s)
 {
+    //the hover square always seems to be invalid, so comment out below code
+    /****
     if (m_hoverSquare == InvalidSquare){ return false; }
 
     //Do not allow showGuess to work when hoving over your own piece
@@ -284,6 +286,7 @@ bool BoardView::showGuess(Square s)
     if (isWhite(p)){
         return false;
     }
+    ***/
     // Don't want to constantly recalculate guess, so remember which square
     // the mouse is hovering over, and only show new guess when it changes
     if (m_guessMove && s != m_hoverSquare && !(m_flags & SuppressGuessMove))
@@ -319,6 +322,17 @@ bool BoardView::showGuess(Square s)
 
 void BoardView::updateGuess(Square s)
 {
+    //we are not going to updateGuess if the square is occupied by a piece, this will ensure that
+    //the guess is not a form of cheating
+    if (s != InvalidSquare)
+    {
+        //Do not allow showGuess to work when hoving over your own piece
+        Piece p = m_game.board().pieceAt(s);
+        //temporarily do not allow guessing for white pieces
+        if (isWhite(p)){
+            return;
+        }
+    }
     // Invalidate any currently displayed guess to allow new guess to show
     m_hoverSquare = InvalidSquare;
     showGuess(s);
