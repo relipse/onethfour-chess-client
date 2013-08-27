@@ -180,9 +180,6 @@ void IccClient::parseDatagram(int dg, const QString &unparsedDg)
 
         //TODO: send played moves so client can resume an adjourned game
         emit onMoveList(match.captured(2).toLong(), match.captured(3));
-
-        qDebug() << "set up the board if necessary" << match.captured(2);
-
     }else if (dg == DG_MATCH){
         QString regex = "\\((\\d+) (?P<challname>[^ ]+) (?P<challrating>\\d+) (?P<challratingtype>\\d) \\{(?P<challtitles>)\\} (?P<receiname>[^ ]+) (?P<receirating>\\d+) (?P<receiratingtype>\\d) \\{(?P<receititles>)\\} (?P<wildnumber>\\d+) (?P<ratingtype>[^ ]+) (?P<israted>\\d) (?P<isadjourned>\\d) (?P<challinitialmin>\\d+) (?P<challincsec>\\d+) (?P<receiverinitialmin>\\d+) (?P<receiverincsec>\\d+) (?P<challcolorrequest>\\-?\\d+)( (?P<assess>[^ ]+ [^ ]+ [^ ]+))? (?P<fancytimecontrol>[^ ]+)\\)";
         QRegularExpression re(regex);
@@ -278,6 +275,13 @@ Notification: PTrajkovic has departed. Notification: PTrajkovic has arrived. aic
 (20 959 TwoEqualsOne X 1)
 DG_PLAYERS_IN_MY_GAME(20 959 TwoEqualsOne X 1)
 (11 vicilio E 1203)*/
+    }else if (dg == DG_MY_GAME_RESULT){
+        //DG_MY_GAME_RESULT(16 959 1 Res 0-1 {White resigns} {B20})
+        QString regex = "\\((?P<dg>\\d+) (?P<gamenum>\\d+) (?P<becomeexamined>\\d+) (?P<gameresultcode>\\w+) (?P<scorestring>([012\\-/\\*]+|aborted)) \\{(?<description>.+?)\\} \\{(?P<eco>(\w+|\\?))\\}\\)";
+        QRegularExpression re(regex);
+        QRegularExpressionMatch m = re.match(unparsedDg);
+        qDebug() << "failed regex: " << regex;
+        emit onMyGameResult(m.captured("gamenum").toLong(), (m.captured("becomeexamined").toInt() == 1), m.captured("gameresultcode"), m.captured("scorestring"), m.captured("description"), m.captured("eco"));
     }else{
         //TODO: finish parsing the rest
         //not specifically parsed emit this so clients can parse it

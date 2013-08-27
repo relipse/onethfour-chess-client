@@ -39,3 +39,41 @@ QString resultString(Result result)
 		return "*";
 	}
 }
+
+
+char PieceToChar(Piece p)
+{
+    switch(p){
+        case WhiteKing: return 'K';
+        case BlackKing: return 'k';
+        case WhitePawn: return 'P';
+        case BlackPawn: return 'p';
+        case WhiteBishop: return 'B';
+        case BlackBishop: return 'b';
+        case WhiteKnight: return 'N';
+        case BlackKnight: return 'n';
+        case WhiteQueen: return 'Q';
+        case BlackQueen: return 'q';
+        case WhiteRook: return 'R';
+        case BlackRook: return 'r';
+        default:
+        //invalid piece or empty
+        return '\0';
+    }
+}
+
+
+char PieceTypeToChar(PieceType pt)
+{
+    switch(pt){
+        case King: return 'K';
+        case Pawn: return 'P';
+        case Bishop: return 'B';
+        case Knight: return 'N';
+        case Queen: return 'Q';
+        case Rook: return 'R';;
+        default:
+        //invalid piece or empty
+        return '\0';
+    }
+}

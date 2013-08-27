@@ -33,8 +33,13 @@ Piece& operator++(Piece& w);
 // Post-Increment
 Piece operator++(Piece& w, int);
 
+char PieceToChar(Piece p);
+
+
 const int ConstPieceTypes = BlackPawn + 1;
 enum PieceType { None, King, Queen, Rook, Bishop, Knight, Pawn };
+char PieceTypeToChar(PieceType pt);
+
 enum Color {White, Black};
 
 /** Return opposite color */

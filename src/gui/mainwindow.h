@@ -75,6 +75,7 @@ public:
     BoardView *GetBoardByServerGameNumber(long game_number);
     void slotServerGameMoveChanged(long game_number);
     int GetBoardIndex(const BoardView *bv);
+    int findGameTabIndex(BoardView *bv);
 protected:
 	/** QObjects Eventfilter for QApplication events */
 	bool eventFilter(QObject *obj, QEvent *event);
@@ -340,6 +341,7 @@ public slots:
     void slotIllegalMove(long game_number, const QString& movestring, int reason);
     void slotTakebackMove(long game_number, long takeback_ply);
     void slotSrvFlip(long game_number, int flip);
+    void slotSrvMyGameResult(long game_number, bool becomeexamined, const QString& gameresultcode, const QString& scorestring, const QString& description, const QString& eco);
     void undoMove();
 protected slots:
     /** Receiver for a failed loading of a database */

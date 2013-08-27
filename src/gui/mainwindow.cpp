@@ -220,6 +220,8 @@ MainWindow::MainWindow() : QMainWindow(),
     connect(m_chessClient, SIGNAL(onTakebackMove(long,long)), this, SLOT(slotTakebackMove(long, long)));
     connect(m_chessClient, SIGNAL(onMoveList(long,QString)), this, SLOT(slotMoveList(long, QString)));
     connect(m_chessClient, SIGNAL(onFlip(long,int)), this, SLOT(slotSrvFlip(long, int)));
+    connect(m_chessClient, SIGNAL(onMyGameResult(long,bool,QString,QString,QString,QString)), this, SLOT(slotSrvMyGameResult(long,bool,QString,QString,QString,QString)));
+
 
     dlgConnect = new DlgConnectToChessServer(this);
     connect(dlgConnect->ui->btnConnect, SIGNAL(clicked()), this, SLOT(slotConnectToChessServer()));
@@ -371,7 +373,7 @@ MainWindow::MainWindow() : QMainWindow(),
 	m_boardSplitter->restoreState(AppSettings->value("BoardSplit").toByteArray());
     m_gameList->m_FilterActive = AppSettings->getValue("FilterFollowsGame").toBool();
 	AppSettings->endGroup();
-    m_toggleFilter->setChecked(m_gameList->m_FilterActive);
+    //m_toggleFilter->setChecked(m_gameList->m_FilterActive);
 
 	/* Status */
     m_statusFilter = new QLabel();
@@ -442,6 +444,7 @@ void MainWindow::slotMyGameStarted(const IccDgGameStarted& dgMyGameStarted){
         //TODO: game already exists? what do to?
         return;
     }
+    //TODO: use unused board or create a new board
     CreateBoardViewByServerGameStarted(dgMyGameStarted);
 }
 /*
@@ -488,6 +491,16 @@ void MainWindow::slotSendMoves(long game_number, const QString &algebraic, const
         //if we are in the middle of a variation
         g.addVariation(m);
         g.forward();
+    }
+    QString color = "G";
+    const char* from = strSquareNames[(int)m.from()];
+    const char* to = strSquareNames[(int)m.to()];
+    if (true){
+       //show last move by green arrow
+       board->drawArrowAnnotation(NULL,
+            color +
+            QString::fromLatin1(from) +
+            QString::fromLatin1(to)    );
     }
     slotServerGameMoveChanged(game_number);
 }
@@ -557,6 +570,33 @@ void MainWindow::slotSrvFlip(long game_number, int flip)
     BoardView* bv = GetBoardByServerGameNumber(game_number);
     if (!bv){ return; }
     bv->setFlipped((flip == 1));
+}
+
+int MainWindow::findGameTabIndex(BoardView* bv){
+    return m_tabWidget->indexOf(bv);
+}
+
+void MainWindow::slotSrvMyGameResult(long game_number, bool becomeexamined, const QString &gameresultcode, const QString &scorestring, const QString &description, const QString &eco)
+{
+    qDebug() << "mygameresult: " << game_number << becomeexamined << gameresultcode << scorestring << description << eco;
+    BoardView* bv = GetBoardByServerGameNumber(game_number);
+    if (!bv){ return; }
+
+    int tabIndex = findGameTabIndex(bv);
+    if (tabIndex == -1){
+        qDebug() << "tab not found with boardview";
+        return;
+    }
+
+    QString oldText = m_tabWidget->tabText(tabIndex);
+    if (becomeexamined){
+        bv->setAlive(true);
+        m_tabWidget->setTabText(tabIndex, "Ex. " + oldText);
+    }else{
+        //just a dead board, player did not enter examine mode right after
+        bv->setAlive(false);
+        m_tabWidget->setTabText(tabIndex, "(old) " + oldText);
+    }
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
@@ -748,7 +788,7 @@ bool MainWindow::gameMoveBy(int change)
 {
     if (game().moveByPly(change))
     {
-        if (m_training->isChecked())
+        if (false)
         {
             slotGameChanged();
         }
@@ -1100,7 +1140,7 @@ void MainWindow::setupActions()
 	QMenu* file = menuBar()->addMenu(tr("&File"));
     QToolBar* fileToolBar = addToolBar(tr("File"));
     fileToolBar->setObjectName("FileToolBar");
-    file->addAction(createAction(tr("&New database..."), SLOT(slotFileNew()), QKeySequence(), fileToolBar, ":/images/new.png"));
+    //file->addAction(createAction(tr("&New database..."), SLOT(slotFileNew()), QKeySequence(), fileToolBar, ":/images/new.png"));
     file->addAction(createAction(tr("&Open..."), SLOT(slotFileOpen()), QKeySequence::Open, fileToolBar, ":/images/folder_open.png"));
     file->addAction(createAction(tr("&Open in UTF8..."), SLOT(slotFileOpenUtf8()), QKeySequence()));
 	QMenu* menuRecent = file->addMenu(tr("Open &recent..."));
@@ -1206,7 +1246,9 @@ void MainWindow::setupActions()
                                        viewToolBar, ":/images/close_board.png"));
     m_menuView->addSeparator();
 
-	/* Game menu */
+    /* Game menu **** commented out because we don't need it for icc stuff ****
+     *TODO: do we ever add it back in?
+     *
 	QMenu *gameMenu = menuBar()->addMenu(tr("&Game"));
     QToolBar* gameToolBar = addToolBar(tr("Game"));
     gameToolBar->setObjectName("GameToolBarMain");
@@ -1220,7 +1262,7 @@ void MainWindow::setupActions()
 
     QMenu* loadMenu = gameMenu->addMenu(tr("&Load"));
 
-    /* Game->Load submenu */
+    /* Game->Load submenu /
     QAction * nextAction = createAction(tr("&Next"), SLOT(slotGameLoadNext()), Qt::CTRL + Qt::SHIFT + Qt::Key_Down,
                                         dbToolBar, ":/images/game_down.png");
     connect(this, SIGNAL(signalLastGameLoaded(bool)), nextAction, SLOT(setDisabled(bool)));
@@ -1252,7 +1294,7 @@ void MainWindow::setupActions()
     flip->setCheckable(true);
     gameMenu->addAction(flip);
 
-	/* Game->Go to submenu */
+    /* Game->Go to submenu /
 	QMenu* goMenu = gameMenu->addMenu(tr("&Go to"));
     QAction* gotoFirstMove = createAction(tr("&Start"), SLOT(slotGameMoveFirst()), Qt::Key_Home, gameToolBar, ":/images/first.png");
     gotoFirstMove->setToolTip(tr("Go to first move"));
@@ -1302,7 +1344,7 @@ void MainWindow::setupActions()
     refactorMenu->addAction(createAction(tr("Uncomment"), SLOT(slotGameUncomment())));
     refactorMenu->addAction(createAction(tr("Remove Variations"), SLOT(slotGameRemoveVariations())));
 
-	/* Search menu */
+    /* Search menu ***** commented out because we don't need this either
 	QMenu* search = menuBar()->addMenu(tr("Fi&nd"));
     QToolBar* searchToolBar = addToolBar(tr("Search"));
     searchToolBar->setObjectName("SearchToolBar");
@@ -1329,17 +1371,15 @@ void MainWindow::setupActions()
     connect(this, SIGNAL(signalCurrentDBhasGames(bool)), reverseFilter, SLOT(setEnabled(bool)));
     search->addAction(reverseFilter);
 
-	/* Database menu */
+    /* Database menu */
 	QMenu* menuDatabase = menuBar()->addMenu(tr("&Database"));
 	m_menuDatabases = menuDatabase->addMenu(tr("&Switch to"));
-	menuDatabase->addAction(createAction(tr("&Copy games..."), SLOT(slotDatabaseCopy()),
-						  Qt::Key_F5));
 
-	/* Help menu */
+    /* Help menu */
 	menuBar()->addSeparator();
 	QMenu *help = menuBar()->addMenu(tr("&Help"));
 
-    /* Help Window */
+    /* Help Window **** the help menu is geared toward chessx, won't help much ****
     DockWidgetEx* pHelpDock = new DockWidgetEx(tr("Help"), this);
     pHelpDock->setObjectName("Help");
     HelpBrowser* pHelpBrowser = new HelpBrowser(this);
@@ -1352,11 +1392,13 @@ void MainWindow::setupActions()
     help->addAction(helpAction);
     pHelpDock->hide();
 
+    ***/
+
     QAction* reportBugAction = createAction(tr("&Report a bug..."), SLOT(slotHelpBug()));
     reportBugAction->setIcon(QIcon(":/images/bug.png"));
     help->addAction(reportBugAction);
 	help->addSeparator();
-    help->addAction(createAction(tr("&About ChessX"), SLOT(slotHelpAbout()), QString(), 0, QString(), QString(), QAction::AboutRole));
+    help->addAction(createAction(tr("&About QOneTh4"), SLOT(slotHelpAbout()), QString(), 0, QString(), QString(), QAction::AboutRole));
 
 #ifdef QT_DEBUG
 	QMenu* debug = help->addMenu(tr("&Debug"));
@@ -1368,13 +1410,13 @@ void MainWindow::setupActions()
     debug->addAction(createAction("Make Screenshot", SLOT(slotScreenShot()), Qt::CTRL + Qt::Key_F12));
 #endif
 
-    fileToolBar->addAction(helpAction);
-    toolbars->addAction(fileToolBar->toggleViewAction());
+    //fileToolBar->addAction(helpAction);
+    //toolbars->addAction(fileToolBar->toggleViewAction());
     toolbars->addAction(editToolBar->toggleViewAction());
     toolbars->addAction(viewToolBar->toggleViewAction());    
-    toolbars->addAction(dbToolBar->toggleViewAction());
-    toolbars->addAction(gameToolBar->toggleViewAction());
-    toolbars->addAction(searchToolBar->toggleViewAction());
+    //toolbars->addAction(dbToolBar->toggleViewAction());
+    //toolbars->addAction(gameToolBar->toggleViewAction());
+    //toolbars->addAction(searchToolBar->toggleViewAction());
 }
 
 bool MainWindow::confirmQuit()

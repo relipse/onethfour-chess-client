@@ -53,6 +53,7 @@ DG_ILLEGAL_MOVE918 e6 2
 
 struct IccDgGameStarted
 {
+    IccDgGameStarted() : dg(0){}
     int dg; //could be 12 or 15 depending on whether it is my game or someone elses
     long int gamenumber;
     QString whitename;
@@ -144,6 +145,7 @@ public:
     void onIllegalMove(long game_number, const QString& movestring, int reason);
     void onTakebackMove(long game_number, long takeback_ply);
     void onFlip(long game_number, int flip);
+    void onMyGameResult(long game_number, bool becomeexamined, const QString& gameresultcode, const QString& scorestring, const QString& description, const QString& eco);
 public:
     void SetUsername(const QString& username);
     void SetPassword(const QString& password);

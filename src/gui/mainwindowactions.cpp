@@ -307,7 +307,7 @@ void MainWindow::UpdateGameText()
         if (m_showPgnSource)
             m_gameView->setPlainText(m_output->output(&game()));
         else
-            m_gameView->setText(m_output->output(&game(),m_training->isChecked()));
+            m_gameView->setText(m_output->output(&game(),false));
     }
 }
 
@@ -487,6 +487,7 @@ void MainWindow::slotBoardMove(Square from, Square to, int button)
     if (m.isLegal())
     {
         PieceType promotionPiece = None;
+        char promoPiece = '\0';
         if (m.isPromotion())
         {
             bool ok;
@@ -498,11 +499,12 @@ void MainWindow::slotBoardMove(Square from, Square to, int button)
                 return;
             promotionPiece = PieceType(Queen + index);
             m.setPromotionPiece(promotionPiece);
+            promoPiece = PieceTypeToChar(promotionPiece);
         }
         //automatically send move to server if connected
-        //TODO: do we really want to do this?
-        if (m_chessClient->connected()){
-            m_chessClient->send(m.toAlgebraic()+"\n");
+        //and the board is marked as "alive"
+        if (m_chessClient->connected() && m_boardView->alive()){
+            m_chessClient->send(m.toAlgebraic()+QString(promoPiece)+"\n");
         }
         // Use an existing move with the correct promotion piece type if it already exists
         if( game().findNextMove(from,to,promotionPiece))
@@ -520,7 +522,7 @@ void MainWindow::slotBoardMove(Square from, Square to, int button)
             }
         }
 
-        if (!m_training->isChecked())
+        if (!false)//m_training->isChecked())
         {
             if (game().atLineEnd())
             {
@@ -683,7 +685,7 @@ void MainWindow::slotGameVarEnter()
     if (g.variationCount(g.currentMove()))
     {
         g.moveToId(g.variations().first());
-        if (m_training->isChecked())
+        if (false)//m_training->isChecked())
         {
             slotGameChanged();
         }
@@ -736,7 +738,7 @@ void MainWindow::slotGameVarDown()
         }
         else
         {
-           if (!m_training->isChecked())
+           if (!false)//m_training->isChecked())
            {
               // Do not show next move in training mode
               g.forward();
@@ -756,7 +758,7 @@ void MainWindow::slotGameVarExit()
             g.backward();
         }
         g.backward();
-        if (m_training->isChecked())
+        if (false)//m_training->isChecked())
         {
             slotGameChanged();
         }
@@ -1026,7 +1028,7 @@ void MainWindow::slotGameViewLink(const QUrl& url)
 		else if (url.path() == "exit") game().moveToId(game().parentMove());
 		else
 			game().moveToId(url.path().toInt());
-        if (m_training->isChecked())
+        if (false)//m_training->isChecked())
         {
             slotGameChanged();
         }
@@ -1036,7 +1038,7 @@ void MainWindow::slotGameViewLink(const QUrl& url)
         }
 	} else if (url.scheme() == "precmt" || url.scheme() == "cmt") {
 		game().moveToId(url.path().toInt());
-        if (m_training->isChecked())
+        if (false)//m_training->isChecked())
         {
             slotGameChanged();
         }
@@ -1664,8 +1666,15 @@ BoardView* MainWindow::GetBoardByServerGameNumber(long game_number){
 BoardView* MainWindow::CreateBoardViewByServerGameStarted(const IccDgGameStarted& dgMyGameStarted)
 {
     BoardView* boardView = new BoardView(m_tabWidget);
+    boardView->setMyHandle(m_chessClient->loggedInHandle());
+    boardView->setDgGameStartedInfo(dgMyGameStarted);
+    boardView->setAlive(true);
     boardView->setMinimumSize(200, 200);
     boardView->configure();
+    if (dgMyGameStarted.played_game){
+        //allow premoves on a played game
+        boardView->setPremove(true);
+    }
     Board nb;
     nb.setStandardPosition();
     boardView->setBoard(nb);
@@ -1689,6 +1698,8 @@ BoardView* MainWindow::CreateBoardViewByServerGameStarted(const IccDgGameStarted
 BoardView* MainWindow::CreateBoardView()
 {
     BoardView* boardView = new BoardView(m_tabWidget);
+    //we are creating a dead board
+    boardView->setAlive(false);
     boardView->setMinimumSize(200, 200);
     boardView->configure();
 
@@ -1752,6 +1763,8 @@ void MainWindow::slotActivateBoardView(int n)
     setWindowTitle(tr("%1 - ChessX").arg(n));
 }
 
+#include <QMessageBox>
+
 //TODO: do we want to resign this game?
 void MainWindow::slotCloseBoardView(int n)
 {
@@ -1759,13 +1772,34 @@ void MainWindow::slotCloseBoardView(int n)
     {
         n = m_tabWidget->currentIndex();
     }
-    if (m_boardViews.count() > 1)
-    {
-        m_boardViews.removeAt(n);
-        m_tabWidget->removeTab(n);
-    }
 
-    //do not rename tabs when closing one
+    //TODO: is the current board the one being closed?
+    if (n == m_tabWidget->indexOf(m_boardView)){
+        if (m_boardView->alive()){
+            //User is either playing, examining or observing a game
+            switch( QMessageBox::information( this, "Close Active Board",
+                                                "Close the board and resign the game?",
+                                                "Close & Resign", "Cancel",
+                                                0, 1 ) ) {
+              case 0:
+                  //TODO
+                  m_chessClient->send(tr("resign") /*+ QString::number(m_boardView->gameNumber())*/ + "\n");
+                  break;
+              case 1:
+              default: // cancel: do not close, do not resign
+                  return;
+                  break;
+              }
+        }
+    }
+    m_boardViews.removeAt(n);
+    m_tabWidget->removeTab(n);
+
+    //always show a chess board
+    if (m_boardViews.count() == 0){
+        CreateBoardView();
+    }
+    activateBoardView(0);
 }
 
 void MainWindow::UpdateGameTitle()

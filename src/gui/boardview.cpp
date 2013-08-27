@@ -64,17 +64,17 @@ void BoardView::setFlags(int flags)
 
 Game& BoardView::game()
 {
-   return m_game;
+    return m_game;
 }
 
 const Game& BoardView::game() const
 {
-   return m_game;
+    return m_game;
 }
 
 void BoardView::setGame(const Game &game)
 {
-   m_game = game;
+    m_game = game;
 }
 
 void BoardView::setBoard(const Board& value,int from, int to, bool atLineEnd)
@@ -276,6 +276,20 @@ void BoardView::mousePressEvent(QMouseEvent* event)
 
 bool BoardView::showGuess(Square s)
 {
+    /*if (s != InvalidSquare)
+    {
+        Piece p = m_game.board().pieceAt(s);
+        //do not allow guessing for your own pieces
+        //we can guess in examine mode
+        if (m_dgGameStartedInfo.played_game && (IamWhite() || IamBlack())){
+            removeGuess();
+            if (IamWhite() && isWhite(p)){
+                  return false;
+            }else if (IamBlack() && isBlack(p)){
+                  return false;
+            }
+        }
+    }*/
     //the hover square always seems to be invalid, so comment out below code
     /****
     if (m_hoverSquare == InvalidSquare){ return false; }
@@ -320,6 +334,29 @@ bool BoardView::showGuess(Square s)
     return false;
 }
 
+#include "../socket/iccclient.h"
+
+bool BoardView::IamWhite()
+{
+    return m_dgGameStartedInfo.whitename.toLower() == m_myHandle.toLower();
+}
+
+bool BoardView::IamBlack()
+{
+    return m_dgGameStartedInfo.blackname.toLower() == m_myHandle.toLower();
+}
+
+QString BoardView::myHandle() const
+{
+    return m_myHandle;
+}
+
+void BoardView::setMyHandle(const QString &myHandle)
+{
+    m_myHandle = myHandle;
+}
+
+
 void BoardView::updateGuess(Square s)
 {
     //we are not going to updateGuess if the square is occupied by a piece, this will ensure that
@@ -327,16 +364,23 @@ void BoardView::updateGuess(Square s)
     if (s != InvalidSquare)
     {
         //Do not allow showGuess to work when hoving over your own piece
-        Piece p = m_game.board().pieceAt(s);
-        //temporarily do not allow guessing for white pieces
-        if (isWhite(p)){
-            return;
-        }
+        //Piece p = m_game.board().pieceAt(s);
     }
     // Invalidate any currently displayed guess to allow new guess to show
     m_hoverSquare = InvalidSquare;
     showGuess(s);
 }
+//return whether or not the game is alive
+bool BoardView::alive() const
+{
+    return m_alive;
+}
+
+void BoardView::setAlive(bool alive)
+{
+    m_alive = alive;
+}
+
 
 void BoardView::removeGuess()
 {
@@ -452,6 +496,7 @@ void BoardView::mouseReleaseEvent(QMouseEvent* event)
     setCursor(QCursor(Qt::ArrowCursor));
     int button = event->button() + event->modifiers();
     Square s = squareAt(event->pos());
+    Square& to = s;
     m_clickUsed = false;
 
     if (!(event->button() & Qt::LeftButton))
@@ -649,6 +694,27 @@ QRect BoardView::coordinateRectHorizontal(Square square)
                  CoordinateSize, CoordinateSize);
 }
 
+
+bool BoardView::premove() const
+{
+    return m_premove;
+}
+
+void BoardView::setPremove(bool premove)
+{
+    m_premove = premove;
+}
+
+const IccDgGameStarted& BoardView::dgGameStartedInfo() const
+{
+    return m_dgGameStartedInfo;
+}
+
+void BoardView::setDgGameStartedInfo(const IccDgGameStarted &dgGameStartedInfo)
+{
+    m_dgGameStartedInfo = dgGameStartedInfo;
+}
+
 bool BoardView::canDrag(Square s) const
 {
     if (m_dragged != Empty) // already dragging
@@ -657,6 +723,10 @@ bool BoardView::canDrag(Square s) const
         return false;
     else if (m_flags & IgnoreSideToMove)
         return m_board.pieceAt(s) != Empty;
+    else if (m_premove && m_board.pieceAt(s)){
+        //we can only premove an existing piece
+        return true;
+    }
     else return m_board.isMovable(s);
 }
 
@@ -801,7 +871,7 @@ void BoardView::drawArrowAnnotation(QPaintEvent* event, QString annotation)
     QRect rect1 = squareRect(square1);
     QRect rect2 = squareRect(square2);
     QRect u = rect1.united(rect2);
-    if (!event->region().intersects(u))
+    if (event && !event->region().intersects(u))
         return;
     int x1 = isFlipped() ? 7 - square1 % 8 : square1 % 8;
     int y1 = isFlipped() ? square1 / 8 : 7 - square1 / 8;

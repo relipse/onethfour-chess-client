@@ -22,6 +22,7 @@
 #include "boardtheme.h"
 #include "guess.h"
 #include "game.h"
+#include "../socket/iccclient.h"
 
 #include <QWidget>
 
@@ -73,6 +74,23 @@ public:
     const Game& game() const;
     void setGame(const Game &game);
 
+    bool alive() const;
+    void setAlive(bool alive);
+
+    bool premove() const;
+    void setPremove(bool premove);
+
+    const IccDgGameStarted &dgGameStartedInfo() const;
+    void setDgGameStartedInfo(const IccDgGameStarted &dgGameStartedInfo);
+
+    //warning, these 2 functions can both potentially return true in an examined game
+    bool IamWhite();
+    bool IamBlack();
+
+    QString myHandle() const;
+    void setMyHandle(const QString &myHandle);
+
+
 public slots:
 
     /** Flips/unflips board. */
@@ -91,7 +109,7 @@ signals:
     void moveMade(Square from, Square to, int button);
 	/** User dragged and dropped a piece holding Control */
 	void copyPiece(Square from, Square to);
-    /** User dragged and dropped a piece holding Control */
+    /** User made an invalid move */
     void invalidMove(Square from);
 	/** User clicked square */
     void clicked(Square square, int button, QPoint pos, Square from);
@@ -154,8 +172,9 @@ private:
     void drawSquareAnnotations(QPaintEvent* event);
     void drawSquareAnnotation(QPaintEvent* event, QString annotation);
     void drawArrowAnnotations(QPaintEvent* event);
+public:
     void drawArrowAnnotation(QPaintEvent* event, QString annotation);
-
+private:
 	Board m_board;
 	BoardTheme m_theme;
 	bool m_flipped;
@@ -184,6 +203,10 @@ private:
     int m_DbIndex;
     int m_gameNumber;
     Game m_game;
+    bool m_alive;
+    bool m_premove;
+    QString m_myHandle;
+    IccDgGameStarted m_dgGameStartedInfo;
 };
 
 class BoardViewMimeData : public QMimeData
