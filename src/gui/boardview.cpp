@@ -842,8 +842,21 @@ void BoardView::drawSquareAnnotation(QPaintEvent* event, QString annotation)
 
 }
 
+
+const QString& BoardView::myRelationToGame() const
+{
+    return m_myRelationToGame;
+}
+
+void BoardView::setMyRelationToGame(const QString &myRelationToGame)
+{
+    m_myRelationToGame = myRelationToGame;
+}
+
 void BoardView::drawArrowAnnotation(QPaintEvent* event, QString annotation)
 {
+
+
     QPainter p(this);
 
     static const QString letters = "abcdefgh";

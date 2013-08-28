@@ -1776,20 +1776,39 @@ void MainWindow::slotCloseBoardView(int n)
     //TODO: is the current board the one being closed?
     if (n == m_tabWidget->indexOf(m_boardView)){
         if (m_boardView->alive()){
+            QString myRelation = m_boardView->myRelationToGame().toUpper();
+            //if I am playing
+            if (myRelation == "PW" || myRelation == "PB" ||
+                myRelation == "SW" || myRelation == "SB")
+            {
+                QString opponentHandle;
+                if (m_boardView->dgGameStartedInfo().blackname != m_boardView->myHandle()){
+                     opponentHandle = m_boardView->dgGameStartedInfo().blackname;
+                }else if (m_boardView->dgGameStartedInfo().whitename != m_boardView->myHandle()){
+                    opponentHandle = m_boardView->dgGameStartedInfo().blackname;
+                }
             //User is either playing, examining or observing a game
             switch( QMessageBox::information( this, "Close Active Board",
                                                 "Close the board and resign the game?",
                                                 "Close & Resign", "Cancel",
                                                 0, 1 ) ) {
               case 0:
-                  //TODO
-                  m_chessClient->send(tr("resign") /*+ QString::number(m_boardView->gameNumber())*/ + "\n");
+                  //resign against a specific opponent (only needed in the simul, but wthey)
+                  m_chessClient->send(tr("resign ") + opponentHandle + "\n");
                   break;
               case 1:
               default: // cancel: do not close, do not resign
                   return;
                   break;
               }
+            }else if (myRelation == "E"){
+               //I am examining a game, we cloed board so now tell server we are not examining it
+               m_chessClient->send(tr("unexamine\n"));
+            }else if (myRelation == "O"){
+                //tell the server to unobserve that game so we stop getting moves
+                m_chessClient->send(tr("unobserve ") +
+                                   QString::number(m_boardView->gameNumber()) + "\n");
+            }
         }
     }
     m_boardViews.removeAt(n);

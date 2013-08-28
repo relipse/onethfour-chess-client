@@ -213,12 +213,14 @@ MainWindow::MainWindow() : QMainWindow(),
 
     //onmatch
     connect(m_chessClient, SIGNAL(onMyGameStarted(IccDgGameStarted)), this, SLOT(slotMyGameStarted(IccDgGameStarted)));
+    connect(m_chessClient, SIGNAL(onStartedObserving(IccDgGameStarted)), this, SLOT(slotSrvStartedObserving(IccDgGameStarted)));
+
     connect(m_chessClient, SIGNAL(onMyRelationToGame(int,QString)), this, SLOT(slotMyRelationToGame(int, QString)));
     //void onMyRelationToGame(int game_number, QString& symbol);
     connect(m_chessClient, SIGNAL(onSendMoves(long,QString,QString,int,int,bool)), this, SLOT(slotSendMoves(long, QString, QString, int, int, bool)));
     connect(m_chessClient, SIGNAL(onIllegalMove(long,QString, int)), this, SLOT(slotIllegalMove(long, QString, int)));
     connect(m_chessClient, SIGNAL(onTakebackMove(long,long)), this, SLOT(slotTakebackMove(long, long)));
-    connect(m_chessClient, SIGNAL(onMoveList(long,QString)), this, SLOT(slotMoveList(long, QString)));
+    connect(m_chessClient, SIGNAL(onMoveList(long,QString,QList<IccCurlyChessMove>&)), this, SLOT(slotMoveList(long,QString,QList<IccCurlyChessMove>&)));
     connect(m_chessClient, SIGNAL(onFlip(long,int)), this, SLOT(slotSrvFlip(long, int)));
     connect(m_chessClient, SIGNAL(onMyGameResult(long,bool,QString,QString,QString,QString)), this, SLOT(slotSrvMyGameResult(long,bool,QString,QString,QString,QString)));
 
@@ -434,6 +436,21 @@ MainWindow::~MainWindow()
     m_boardViews.clear(); // Widgets are deleted by Qt
 }
 
+
+void MainWindow::slotSrvStartedObserving(const IccDgGameStarted& dgStartedObserving)
+{
+    if (dgStartedObserving.played_game){
+        //TODO: observing a live game, do something?
+    }
+    BoardView* bv = GetBoardByServerGameNumber(dgStartedObserving.gamenumber);
+    if (bv){
+        //TODO: game already exists? what do to?
+        return;
+    }
+    //TODO: use unused board or create a new board
+    CreateBoardViewByServerGameStarted(dgStartedObserving);
+}
+
 void MainWindow::slotMyGameStarted(const IccDgGameStarted& dgMyGameStarted){
     if (dgMyGameStarted.played_game){
         //TODO: disable all computers and engines, unless player has (C)omputer tag
@@ -464,6 +481,7 @@ void MainWindow::slotMyRelationToGame(int game_number, const QString &symbol)
         qDebug() << "serious error cannot find game";
         return;
     }
+    board->setMyRelationToGame(symbol);
     if (symbol == "PW" || symbol == "SW"){
         board->setFlipped(false);
     }else if (symbol == "PB" || symbol == "SB"){
@@ -472,17 +490,19 @@ void MainWindow::slotMyRelationToGame(int game_number, const QString &symbol)
 
     if (symbol == "X"){
         board->close();
+        int tabIndex = m_tabWidget->indexOf(board);
+        m_tabWidget->setTabText(tabIndex, symbol + " " + m_tabWidget->tabText(tabIndex));
         qDebug() << "board " << game_number << " closed";
+        //TODO: what to do if i left game? it seems like I should close the tab
+        //maybe i should have an option to not remove the tabs?
+        m_tabWidget->removeTab(tabIndex);
     }
 }
 
-void MainWindow::slotSendMoves(long game_number, const QString &algebraic, const QString &smith, int timetaken, int clock, bool is_variation)
-{
-    qDebug() << "slotSendMoves " << algebraic << smith << game_number;
-    BoardView* board = GetBoardByServerGameNumber(game_number);
-    activateBoardView(GetBoardIndex(board));
-    Game& g =  board->game();
-    Move m(g.board().parseMove(smith));
+void MainWindow::PlaySmithMove(BoardView* bv, const QString& smithMove, bool update, bool arrow, char arrow_color){
+    Game& g =  bv->game();
+    Move m(g.board().parseMove(smithMove));
+    //TODO: depending on the chess wild type, we may allow non-legal normal chess moves
     //who cares if the move is legal, just do it
     if (g.atLineEnd())
     {
@@ -492,31 +512,62 @@ void MainWindow::slotSendMoves(long game_number, const QString &algebraic, const
         g.addVariation(m);
         g.forward();
     }
-    QString color = "G";
-    const char* from = strSquareNames[(int)m.from()];
-    const char* to = strSquareNames[(int)m.to()];
-    if (true){
+
+    if (arrow){
+        QString color(arrow_color);
+        const char* from = strSquareNames[(int)m.from()];
+        const char* to = strSquareNames[(int)m.to()];
+
        //show last move by green arrow
-       board->drawArrowAnnotation(NULL,
+       bv->drawArrowAnnotation(NULL,
             color +
             QString::fromLatin1(from) +
             QString::fromLatin1(to)    );
     }
+
+    if (update){
+        bv->update();
+    }
+}
+
+void MainWindow::slotSendMoves(long game_number, const QString &algebraic, const QString &smith, int timetaken, int clock, bool is_variation)
+{
+    qDebug() << "slotSendMoves " << algebraic << smith << game_number;
+    BoardView* board = GetBoardByServerGameNumber(game_number);
+    activateBoardView(GetBoardIndex(board));
+    PlaySmithMove(board, smith, true, true, 'G');
     slotServerGameMoveChanged(game_number);
 }
 
-void MainWindow::slotMoveList(long game_number, const QString &moveList)
+void sleepy(int ms)
 {
-    qDebug() << "Game: " << game_number << " move list: " << moveList;
-    BoardView* bv = GetBoardByServerGameNumber(game_number);
-    if (!bv){ return; }
+#ifdef Q_OS_WIN
+    Sleep(uint(ms));
+#else
+    struct timespec ts = { ms / 1000, (ms % 1000) * 1000 * 1000 };
+    nanosleep(&ts, NULL);
+#endif
+}
 
-    if (moveList.length() == 64){
+void MainWindow::slotMoveList(long game_number, const QString &position, QList<IccCurlyChessMove>& move_list)
+{
+    qDebug() << "slotMoveList: Game #" << game_number << " position: " << position;
+    BoardView* bv = GetBoardByServerGameNumber(game_number);
+    if (!bv){
+        qDebug() << "invalid board...probably creating...";
+        sleepy(200);
+        bv = GetBoardByServerGameNumber(game_number);
+        if (!bv){
+            qDebug() << "still invalid board, exiting";
+            return;
+        }
+    }
+
+    if (position.length() == 64){
         Board b;
-        if (b.from64Char(moveList)){
+        if (b.from64Char(position)){
             bv->game().setStartingBoard(b);
             bv->setBoard(b);
-            bv->update();
             qDebug() << "Valid char board";
         }else{
             qDebug() << "Invalid 64 Char board";
@@ -524,6 +575,13 @@ void MainWindow::slotMoveList(long game_number, const QString &moveList)
     }else{
         qDebug() << "move list not a char position";
     }
+
+    //now we actually need to play the moves on the board if there is a given move list
+    for(int i = 0; i < move_list.size();++i){
+        qDebug() << "calling PlaySmithMove() " << move_list[i].fromTo;
+        PlaySmithMove(bv, move_list[i].fromTo, false, false);
+    }
+    bv->update();
 }
 
 //when I make an illegal move, we need to take it back by 1 ply

@@ -174,11 +174,13 @@ private:
     void drawArrowAnnotations(QPaintEvent* event);
 public:
     void drawArrowAnnotation(QPaintEvent* event, QString annotation);
+    const QString& myRelationToGame() const;
+    void setMyRelationToGame(const QString &myRelationToGame);
 private:
-	Board m_board;
-	BoardTheme m_theme;
-	bool m_flipped;
-	bool m_showFrame;
+    Board m_board;
+    BoardTheme m_theme;
+    bool m_flipped;
+    bool m_showFrame;
     bool m_showCurrentMove;
 	bool m_guessMove;
 	int m_selectedSquare;
@@ -207,6 +209,7 @@ private:
     bool m_premove;
     QString m_myHandle;
     IccDgGameStarted m_dgGameStartedInfo;
+    QString m_myRelationToGame;
 };
 
 class BoardViewMimeData : public QMimeData

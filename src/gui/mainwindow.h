@@ -76,6 +76,8 @@ public:
     void slotServerGameMoveChanged(long game_number);
     int GetBoardIndex(const BoardView *bv);
     int findGameTabIndex(BoardView *bv);
+
+    void PlaySmithMove(BoardView *bv, const QString &smithMove, bool update, bool arrow, char arrow_color = '\0');
 protected:
 	/** QObjects Eventfilter for QApplication events */
 	bool eventFilter(QObject *obj, QEvent *event);
@@ -335,9 +337,10 @@ public slots:
     void slotChessServerSocketError(QAbstractSocket::SocketError error);
 
     void slotMyGameStarted(const IccDgGameStarted &dgMyGameStarted);
+    void slotSrvStartedObserving(const IccDgGameStarted &dgStartedObserving);
     void slotMyRelationToGame(int game_number, const QString& symbol);
     void slotSendMoves(long game_number, const QString& algebraic,const QString& smith, int timetaken, int clock, bool is_variation);
-    void slotMoveList(long game_number, const QString& moveList);
+    void slotMoveList(long game_number, const QString& position, QList<IccCurlyChessMove> &move_list);
     void slotIllegalMove(long game_number, const QString& movestring, int reason);
     void slotTakebackMove(long game_number, long takeback_ply);
     void slotSrvFlip(long game_number, int flip);

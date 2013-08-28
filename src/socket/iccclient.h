@@ -31,6 +31,17 @@ struct IccDgMatch
     QString assess;
 };
 
+
+struct IccCurlyChessMove{
+    IccCurlyChessMove():algebraic(""),fromTo(""),num(0){}
+    QString algebraic;
+    QString fromTo;
+    int num;
+    long secondsLeft;
+    bool whitesMove;
+};
+#include <QMetaType>
+Q_DECLARE_METATYPE(QList<IccCurlyChessMove>)
 /*
 DG_WHO_AM_Irelipse {}
 (31 relipse {} {hi} 1)(told relipse) aics%
@@ -136,12 +147,14 @@ public:
     void onMatch(const IccDgMatch& dgMatch);
     void onMyGameStarted(const IccDgGameStarted& dgMyGameStarted);
     void onGameStarted(const IccDgGameStarted& dgGameStarted);
+    void onStartedObserving(const IccDgGameStarted& dgStartedObserving);
+
     //this tells client whether i am white or black or examining, observing or x game over etc
     void onMyRelationToGame(int game_number, const QString& symbol);
     //whenever moves get sent (from myself or opponent), this signal should update the board officially
     //and the move confirmed
     void onSendMoves(long game_number, const QString& algebraic,const QString& smith, int timetaken, int clock, bool is_variation);
-    void onMoveList(long game_number, const QString& move_list);
+    void onMoveList(long game_number, const QString& position, QList<IccCurlyChessMove>& move_list);
     void onIllegalMove(long game_number, const QString& movestring, int reason);
     void onTakebackMove(long game_number, long takeback_ply);
     void onFlip(long game_number, int flip);
